@@ -2,15 +2,39 @@ import pandas as pd
 from sklearn.metrics import f1_score, recall_score, roc_auc_score
 import xgboost as xgb
 import time
+from datetime import datetime
+import mlflow
 
 import ray
 from ray import tune
 from ray.tune.search import BasicVariantGenerator
 from ray.tune.search.optuna import OptunaSearch
 from ray.util.metrics import Counter, Histogram, Gauge
+from ray.air.integrations.mlflow import MLflowLoggerCallback
 
 # Import preprocessing functions from your preprocess file
 from preprocess import prepare_xgboost_data
+
+# MLFLOW: Setup ============================================================
+print(10 * "=" + " MLFLOW SETUP " + 10 * "=")
+
+mlflow.set_tracking_uri("file:./mlruns")
+mlflow.set_experiment("xgboost_ray_experiment")
+print(f"MLflow tracking URI: {mlflow.get_tracking_uri()}")
+print(f"MLflow experiment: {mlflow.get_experiment_by_name('xgboost_ray_experiment')}")
+
+run_config=tune.RunConfig(
+        name='RAY_xgboost_els_auc_random',
+        storage_path='/Users/isiomamabatah/Desktop/Python/Projects/Email_Lead_Scoring/results',
+        callbacks=[
+            MLflowLoggerCallback(
+                tracking_uri="file:./mlruns",
+                experiment_name=f"xgboost_ray_experiment_{datetime.now().strftime('%Y%m%d_%H%M%S')}",
+                save_artifact=True,
+                tags={"algorithm": "random_search", "model": "xgboost"}
+            )
+        ]
+)
 
 # PREPROCESS ============================================================
 print(10 * "=" + " PREPROCESS " + 10 * "=")
@@ -94,8 +118,8 @@ search_space = {
 print("Ray Tune setup complete!")
 print(f"Search space: {search_space}\n")
 
-# Run Ray Tune: 
 
+# Run Ray Tune: 
 # - Random Search Algorithm
 print("Starting Ray Tune hyperparameter optimization...")
 tuner_Random = tune.Tuner(
@@ -108,10 +132,7 @@ tuner_Random = tune.Tuner(
         search_alg=BasicVariantGenerator(random_state=42)
     ),
     param_space=search_space,
-    run_config=tune.RunConfig(
-        name='RAY_xgboost_els_auc_random',
-        storage_path='/Users/isiomamabatah/Desktop/Python/Projects/Email_Lead_Scoring/results'
-    )
+    run_config=run_config
 )
 
 # - Bayesian Optimization with Optuna
@@ -138,13 +159,13 @@ results_Optuna = tuner_Optuna.fit()
 # RESULTS ===========================================================
 print(10 * "=" + " RESULTS " + 10 * "=")
 
-best_result = results_Optuna.get_best_result(metric="roc_auc", mode="max")
+best_result = results_Random.get_best_result(metric="roc_auc", mode="max")
 print("Best trial config:", best_result.config)
 print("Best trial metrics:", best_result.metrics)
 
 # EXPAND YOUR ANALYSIS:
 # Get all results for deeper analysis
-df_results = results_Optuna.get_dataframe()
+df_results = results_Random.get_dataframe()
 print(f"\nTotal trials completed: {len(df_results)}")
 print(f"Best ROC AUC achieved: {df_results['roc_auc'].max():.4f}")
 print(f"Average ROC AUC: {df_results['roc_auc'].mean():.4f}")
@@ -154,7 +175,6 @@ print(f"Average ROC AUC: {df_results['roc_auc'].mean():.4f}")
 import os
 import joblib
 import json
-from datetime import datetime
 
 def save_best_model(best_result, X_train, y_train, X_test, y_test):
     """Recreate and save the best model with metadata"""
