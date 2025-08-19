@@ -174,3 +174,6 @@ models/*.joblib
 
 # Results
 results/
+
+# Course Materials
+ds4b_201p_course/
