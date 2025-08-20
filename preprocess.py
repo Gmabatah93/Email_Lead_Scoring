@@ -189,4 +189,4 @@ df_leads_processed = preprocess_leads(df_leads_raw)
 df_leads_processed.to_csv("data/leads_cleaned.csv", index=False)
 
 print(f"Preprocessing completed! Saved {df_leads_processed.shape[0]} records with {df_leads_processed.shape[1]} features.")
-print("Data saved to: data/leads_cleaned.csv")
+print("Data saved to: data/leads_cleaned.csv\n\n")

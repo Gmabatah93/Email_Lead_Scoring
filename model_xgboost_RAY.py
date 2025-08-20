@@ -6,6 +6,8 @@ import time
 from datetime import datetime
 import mlflow
 import joblib
+import os
+import json
 
 import ray
 from ray import tune
@@ -19,18 +21,20 @@ from ray.air import session
 from preprocess import prepare_xgboost_data
 
 # SETUP ============================================================
-print(20 * "=" + "SETUP " + 20 * "=")
+print("=" * 50)
+print("SETUP")
+print("=" * 50)
 
 # MLflow setup
 mlflow.set_tracking_uri("file:./mlruns")
-print(f"MLflow tracking URI: {mlflow.get_tracking_uri()}")
+print(f"🖥️ MLflow tracking URI: {mlflow.get_tracking_uri()}")
 
 experiment_name = f"xgboost_ray_experiment_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
-print(f"Experiment name: {experiment_name}")
+print(f"🖥️ Experiment name: {experiment_name}")
 
 # Define the metric to optimize
 METRIC = "roc_auc"
-print(f"Using metric: {METRIC} for optimization")
+print(f"🖥️ Using metric: {METRIC} for optimization")
 
 # Initialize Ray
 ray.init(
@@ -40,10 +44,12 @@ ray.init(
     include_dashboard=True,
     _metrics_export_port=8080  # Enable Prometheus metrics
 )
-print(f"Ray initialized with resources: {ray.cluster_resources()}")
+print(f"✅ Ray initialized with resources: {ray.cluster_resources()}\n\n")
 
 # PREPROCESS ============================================================
-print(20 * "=" + " PREPROCESS " + 20 * "=")
+print("=" * 50)
+print("PREPROCESS")
+print("=" * 50)
 
 # Use the preprocessing function from preprocess.py
 X_train, X_val, X_test, y_train, y_val, y_test, label_encoders = prepare_xgboost_data(
@@ -72,11 +78,13 @@ y_train_ref = ray.put(y_train)
 y_val_ref = ray.put(y_val)
 y_test_ref = ray.put(y_test)
 
-print("Preprocessing completed using imported function!")
-print(f"Ready for XGBoost training with {X_train.shape[0]} training samples.")
+print("✅ Preprocessing completed using imported function!")
+print(f"✅ Ready for XGBoost training with {X_train.shape[0]} training samples.\n\n")
 
 # XGBoost: Function ===================================================
-print(20 * "=" + " XGBoost: Trainable " + 20 * "=")
+print("=" * 50)
+print("XGBoost: Trainable Function")
+print("=" * 50)
 
 # Custom metrics
 trial_counter = Counter("xgboost_trials_total", description="Total XGBoost trials completed")
@@ -138,10 +146,12 @@ def trainable_xgboost(config):
     # Report to Ray
     tune.report({"f1": f1, "recall": recall, "roc_auc": roc_auc})
 
-print("🔥 XGBoost trainable function defined with Ray Tune and Prometheus metrics!")
+print("🔥 XGBoost trainable function defined with Ray Tune and Prometheus metrics!\n\n")
 
 # RAY: Tune ===========================================================
-print(20 * "=" + f" RAY TUNE: {METRIC} " + 20 * "=")
+print("=" * 50)
+print(f" RAY TUNE: {METRIC}")
+print("=" * 50)
 
 # RAY: Run Configuration
 run_config=tune.RunConfig(
@@ -195,13 +205,18 @@ tuner_Random = tune.Tuner(
 print("🔥 Ray Tune tuner initialized with Random Search algorithm.")
 # RAY: Scheduler (Explore FUTURE)
 
-# Execute the tuning
-print("🤞🏾 Starting Ray Tune hyperparameter optimization...")
+# XGBoost: RAY FIT ===========================================================
+print("=" * 50)
+print(f"🤞🏾 XGBoost: RAY Fit {METRIC}")
+print("=" * 50)
+
 results_Random = tuner_Random.fit()
-print("✅ Ray Tune hyperparameter optimization completed!")
+print("✅ Ray Tune hyperparameter optimization completed!\n\n")
 
 # RESULTS ===========================================================
-print(20 * "=" + " RESULTS " + 20 * "=")
+print("=" * 50)
+print("RESULTS")
+print("=" * 50)
 
 best_result = results_Random.get_best_result(metric=METRIC, mode="max")
 print("📝 Best trial config:", best_result.config)
@@ -234,9 +249,6 @@ print("📝 Best trial logged to MLflow!")
 
 
 # SAVE BEST MODEL ===========================================================
-import os
-import joblib
-import json
 
 def save_best_model(best_result, X_train, y_train, X_val, y_val):
     """Recreate and save the best model with metadata"""
