@@ -18,12 +18,16 @@ from ray.air.integrations.mlflow import MLflowLoggerCallback
 from ray.air import session
 
 # Import preprocessing functions from your preprocess file
-from preprocess import prepare_xgboost_data
+from preprocess import prepare_xgboost_data, preprocess_leads
 
 # SETUP ============================================================
 print("=" * 50)
 print("SETUP")
 print("=" * 50)
+
+# Get raw data
+df_leads_raw = pd.read_csv("data/leads_raw.csv")
+print(f"✅ Loaded raw data with {df_leads_raw.shape[0]} records and {df_leads_raw.shape[1]} features.")
 
 # MLflow setup
 mlflow.set_tracking_uri("file:./mlruns")
@@ -50,6 +54,12 @@ print(f"✅ Ray initialized with resources: {ray.cluster_resources()}\n\n")
 print("=" * 50)
 print("PREPROCESS")
 print("=" * 50)
+
+# Apply general preprocessing
+df_leads_processed = preprocess_leads(df_leads_raw)
+print(f"✅ Preprocessed data with {df_leads_processed.shape[0]} records and {df_leads_processed.shape[1]} features.")
+print(f"✅ Preprocessing completed! Saved {df_leads_processed.shape[0]} records with {df_leads_processed.shape[1]} features.")
+print("📝 Data saved to: data/leads_cleaned.csv\n")
 
 # Use the preprocessing function from preprocess.py
 X_train, X_val, X_test, y_train, y_val, y_test, label_encoders = prepare_xgboost_data(
@@ -153,6 +163,29 @@ print("=" * 50)
 print(f" RAY TUNE: {METRIC}")
 print("=" * 50)
 
+NUM_OF_TRIALS = 24
+WORKERS = 6
+
+# RAY: Search Space
+search_space = {
+    'max_depth': tune.randint(3, 8),
+    'learning_rate': tune.uniform(0.01, 0.3),
+    'n_estimators': tune.randint(50, 200),  # Smaller range for faster trials
+    'subsample': tune.uniform(0.7, 1.0),
+    'colsample_bytree': tune.uniform(0.7, 1.0)
+}
+print(f"🔥 Search Space: {search_space}")
+
+# RAY: Tune Configuration
+tune_config = tune.TuneConfig(
+    metric=METRIC,
+    mode="max",
+    num_samples=NUM_OF_TRIALS,
+    max_concurrent_trials=WORKERS,
+    search_alg=BasicVariantGenerator(random_state=42) 
+)
+print(f"🔥 Tune Config: Random Search w/ {NUM_OF_TRIALS} trials, {WORKERS} workers.")
+
 # RAY: Run Configuration
 run_config=tune.RunConfig(
         name=f"RAY_xgboost_els_{METRIC}_random",
@@ -172,27 +205,7 @@ run_config=tune.RunConfig(
         )
 
 )
-print("🔥 Ray Tune run configuration set with MLflow logging and checkpointing.")
-
-# RAY: Search Space
-search_space = {
-    'max_depth': tune.randint(3, 8),
-    'learning_rate': tune.uniform(0.01, 0.3),
-    'n_estimators': tune.randint(50, 200),  # Smaller range for faster trials
-    'subsample': tune.uniform(0.7, 1.0),
-    'colsample_bytree': tune.uniform(0.7, 1.0)
-}
-print("🔥 Ray Tune Search Space complete!")
-
-# RAY: Tune Configuration
-tune_config = tune.TuneConfig(
-    metric=METRIC,
-    mode="max",
-    num_samples=24,
-    max_concurrent_trials=6,
-    search_alg=BasicVariantGenerator(random_state=42) 
-)
-print("🔥 Ray Tune configuration set with Random Search algorithm.")
+print("🔥 Run Config: set with MLflow logging and checkpointing.")
 
 # Run Ray Tune: 
 # - Random Search Algorithm
@@ -202,12 +215,12 @@ tuner_Random = tune.Tuner(
     param_space=search_space,
     run_config=run_config
 )
-print("🔥 Ray Tune tuner initialized with Random Search algorithm.")
+print("🔥🔥 Ray Tuner:  Initialized! 🔥🔥\n\n")
 # RAY: Scheduler (Explore FUTURE)
 
 # XGBoost: RAY FIT ===========================================================
 print("=" * 50)
-print(f"🤞🏾 XGBoost: RAY Fit {METRIC}")
+print(f"👾 XGBoost: RAY Fit {METRIC} 👾")
 print("=" * 50)
 
 results_Random = tuner_Random.fit()
@@ -220,7 +233,7 @@ print("=" * 50)
 
 best_result = results_Random.get_best_result(metric=METRIC, mode="max")
 print("📝 Best trial config:", best_result.config)
-print("📝 Best trial metrics:", best_result.metrics)
+# print("📝 Best trial metrics:", best_result.metrics)
 
 # Checkpoint
 best_result.best_checkpoints
@@ -246,7 +259,7 @@ mlflow.log_metrics(numeric_metrics)
 
 print("📝 Best trial logged to MLflow!")
 
-
+# tensorboard --logdir /tmp/ray/session_2025-08-20_09-18-44_749895_74984/artifacts/2025-08-20_09-18-47/RAY_xgboost_els_roc_auc_random/driver_artifacts
 
 # SAVE BEST MODEL ===========================================================
 
@@ -286,7 +299,7 @@ def save_best_model(best_result, X_train, y_train, X_val, y_val):
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     
     # Save model
-    model_path = f"models/xgboost_ray_best_{timestamp}.pkl"
+    model_path = f"models/ray/xgboost_ray_best_{timestamp}.pkl"
     joblib.dump(best_model, model_path)
     
     # Save metadata
@@ -300,7 +313,7 @@ def save_best_model(best_result, X_train, y_train, X_val, y_val):
         "search_algorithm": "Random Search"
     }
     
-    metadata_path = f"models/metadata_{timestamp}.json"
+    metadata_path = f"models/ray/metadata_{timestamp}.json"
     with open(metadata_path, "w") as f:
         json.dump(metadata, f, indent=2)
     

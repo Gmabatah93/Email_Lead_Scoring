@@ -8,7 +8,6 @@ from sklearn.model_selection import train_test_split
 
 # LOAD RAW DATA ================================================================
 df_raw = pd.read_csv("data/subscribers_joined.csv")
-df_raw.info()
 
 # LOAD AND PREPARE TAG DATA ===================================================
 with sql.create_engine("sqlite:///data/crm_database.sqlite").connect() as conn:
@@ -98,7 +97,6 @@ def preprocess_leads(df: pd.DataFrame) -> pd.DataFrame:
 def preprocess_for_xgboost(df):
     """XGBoost-specific preprocessing"""
     
-    print("Starting preprocessing for XGBoost...")
     df_processed = df.copy()
     
     # Remove unnecessary columns for XGBoost
@@ -142,7 +140,7 @@ def preprocess_for_xgboost(df):
 def prepare_xgboost_data(data_path="data/leads_cleaned.csv", test_size=0.2, val_size=0.2, random_state=123):
     """Complete data preparation pipeline for XGBoost with separate test set"""
     
-    print(10 * "=" + " XGBOOST PREPROCESSING " + 10 * "=")
+    print(10 * "=" + " PREPROCESS: XGBoost " + 10 * "=")
     
     # Load data
     df_leads = pd.read_csv(data_path)
@@ -150,7 +148,6 @@ def prepare_xgboost_data(data_path="data/leads_cleaned.csv", test_size=0.2, val_
     # Apply XGBoost preprocessing
     X, y, label_encoders = preprocess_for_xgboost(df_leads)
     
-    print("Preprocessing completed!")
     print(f"Ready for XGBoost training with {X.shape[0]} samples and {X.shape[1]} features.\n")
     
     # Split data into training + temp (validation + test)
@@ -177,16 +174,4 @@ def prepare_xgboost_data(data_path="data/leads_cleaned.csv", test_size=0.2, val_
     
     return X_train, X_val, X_test, y_train, y_val, y_test, label_encoders
 
-# EXECUTE PREPROCESSING =======================================================
-print("=" * 50)
-print("EXECUTING PREPROCESSING PIPELINE")
-print("=" * 50)
 
-# Apply general preprocessing
-df_leads_processed = preprocess_leads(df_leads_raw)
-
-# Save cleaned data
-df_leads_processed.to_csv("data/leads_cleaned.csv", index=False)
-
-print(f"Preprocessing completed! Saved {df_leads_processed.shape[0]} records with {df_leads_processed.shape[1]} features.")
-print("Data saved to: data/leads_cleaned.csv\n\n")

@@ -1,5 +1,5 @@
 {
-  "timestamp": "20250819_220301",
+  "timestamp": "20250820_085814",
   "model_type": "XGBoost_Ray_Tune",
   "best_config": {
     "max_depth": 3,
@@ -12,15 +12,15 @@
     "f1": 0.22594142259414227,
     "recall": 0.13989637305699482,
     "roc_auc": 0.8129131854419316,
-    "timestamp": 1755658971,
+    "timestamp": 1755698285,
     "checkpoint_dir_name": null,
     "done": true,
     "training_iteration": 1,
-    "trial_id": "27b15_00005",
-    "date": "2025-08-19_22-02-51",
-    "time_this_iter_s": 0.19826769828796387,
-    "time_total_s": 0.19826769828796387,
-    "pid": 41340,
+    "trial_id": "afe23_00005",
+    "date": "2025-08-20_08-58-05",
+    "time_this_iter_s": 0.21423006057739258,
+    "time_total_s": 0.21423006057739258,
+    "pid": 69734,
     "hostname": "Isiomas-MacBook-Air.local",
     "node_ip": "127.0.0.1",
     "config": {
@@ -30,7 +30,7 @@
       "subsample": 0.991209407318471,
       "colsample_bytree": 0.9679363363966593
     },
-    "time_since_restore": 0.19826769828796387,
+    "time_since_restore": 0.21423006057739258,
     "iterations_since_restore": 1,
     "experiment_tag": "5_colsample_bytree=0.9679,learning_rate=0.1128,max_depth=3,n_estimators=163,subsample=0.9912"
   },
