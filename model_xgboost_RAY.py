@@ -40,6 +40,9 @@ print(f"🖥️ Experiment name: {experiment_name}")
 METRIC = "roc_auc"
 print(f"🖥️ Using metric: {METRIC} for optimization")
 
+# Create a unique timestamp for this run
+timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+
 # Initialize Ray
 ray.init(
     num_cpus=6,
@@ -188,8 +191,8 @@ print(f"🔥 Tune Config: Random Search w/ {NUM_OF_TRIALS} trials, {WORKERS} wor
 
 # RAY: Run Configuration
 run_config=tune.RunConfig(
-        name=f"RAY_xgboost_els_{METRIC}_random",
-        storage_path='/Users/isiomamabatah/Desktop/Python/Projects/Email_Lead_Scoring/results',
+        name=f"RAY_xgboost_els_{METRIC}_{timestamp}",
+        storage_path='/Users/isiomamabatah/Desktop/Python/Projects/Email_Lead_Scoring/results/training',
         callbacks=[
             MLflowLoggerCallback(
                 tracking_uri="file:./mlruns",
@@ -263,7 +266,7 @@ print("📝 Best trial logged to MLflow!")
 
 # SAVE BEST MODEL ===========================================================
 
-def save_best_model(best_result, X_train, y_train, X_val, y_val):
+def save_best_model(best_result, X_train, y_train, X_val, y_val, timestamp):
     """Recreate and save the best model with metadata"""
     
     # Convert NumPy arrays to pandas DataFrames/Series if necessary
@@ -295,9 +298,6 @@ def save_best_model(best_result, X_train, y_train, X_val, y_val):
     # Retrain on full training set (training + validation)
     best_model.fit(X_full_train, y_full_train)
     
-    # Generate timestamp
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    
     # Save model
     model_path = f"models/ray/xgboost_ray_best_{timestamp}.pkl"
     joblib.dump(best_model, model_path)
@@ -327,5 +327,6 @@ best_model, model_path, metadata_path = save_best_model(
     X_train, 
     y_train, 
     X_val, 
-    y_val
+    y_val,
+    timestamp∫
 )

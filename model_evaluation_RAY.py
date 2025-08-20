@@ -15,6 +15,68 @@ from sklearn.metrics import (
 from sklearn.model_selection import cross_val_score
 import xgboost as xgb
 
+"""
+FUTURE ENHANCEMENT: 
+
+Confidence Learning
+    Methods:
+    1. Calibration Plots:   
+        - Evaluate whether the predicted probabilities match the actual likelihood of correctness.
+        - Use tools like sklearn.calibration.calibration_curve.
+    2. Uncertainty Analysis:
+        - Identify predictions with low confidence (e.g., probabilities close to 0.5) and flag them for human review or further analysis.
+    3. Custom Thresholding:
+        - Experiment with different thresholds for classification to optimize for specific business goals (e.g., minimizing false negatives).
+    Why:
+    - It ensures that the model's predictions are not only accurate but also reliable.
+    - It helps in making informed decisions, especially in high-stakes applications like lead scoring, where false positives or negatives can have significant business impacts.
+
+Slicing
+    Why:
+    - Provides insights into model performance across different segments of the data.
+    - Fairness: Ensures the model is not biased against specific subgroups.
+    - Debugging: Helps identify where the model struggles and why.
+    - Business Impact: Ensures consistent performance across key customer segments.
+
+Interpretability
+    Methods:
+    - feature_importance
+    - shap
+    - pdps
+    Why:
+    - Trust: Helps stakeholders understand and trust the model's decisions.
+    - Debugging: Identifies issues like over-reliance on irrelevant features.
+    - Fairness: Ensures the model is not biased against specific groups.
+
+Behavioral Testing
+    Methods:
+    - Resuse [Slicing | Confidence Learning | Interpretability]
+    - Edge Case Testing
+    - Bias Testing
+    - Threshold Sensitivity Testing
+    Why:
+    - Fairness: Ensures the model performs equitably across all subgroups.
+    - Robustness: Verifies that the model handles edge cases and unusual inputs gracefully.
+    - Business Alignment: Confirms that the model's behavior aligns with business goals and expectations.
+
+Capability vs Alignment
+1. Capability
+    - Definition: Capability refers to the technical performance of the model—how well it can achieve the task it was designed for.
+    - Focus: Metrics, accuracy, and predictive power.
+    - Examples:
+        - Accuracy, precision, recall, F1 score, ROC AUC, etc.
+        - Evaluating the model's ability to generalize to unseen data.
+        - Testing the model's robustness to edge cases or noisy inputs.
+
+2. Alignment
+    - Definition: Alignment refers to how well the model's behavior matches the goals, values, and expectations of the stakeholders or the business.
+    - Focus: Fairness, interpretability, and ethical considerations.
+    - Examples:
+        - Ensuring the model is not biased against specific subgroups (e.g., fairness across country_code or email_provider).
+        - Verifying that the model's predictions align with business objectives (e.g., minimizing false negatives in lead scoring).
+        - Providing explanations for predictions to build trust with stakeholders.
+"""
+
 class ModelEvaluator:
     """Comprehensive model evaluation class"""
     
@@ -113,7 +175,7 @@ class ModelEvaluator:
         plt.ylabel('True Label')
         plt.xlabel('Predicted Label')
         plt.tight_layout()
-        plt.savefig('models/confusion_matrix.png', dpi=300, bbox_inches='tight')
+        plt.savefig('results/evaluation/confusion_matrix.png', dpi=300, bbox_inches='tight')
         plt.show()
         
     def plot_roc_curve(self):
@@ -133,7 +195,7 @@ class ModelEvaluator:
         plt.legend(loc="lower right")
         plt.grid(True, alpha=0.3)
         plt.tight_layout()
-        plt.savefig('models/roc_curve.png', dpi=300, bbox_inches='tight')
+        plt.savefig('results/evaluation/roc_curve.png', dpi=300, bbox_inches='tight')
         plt.show()
         
     def plot_precision_recall_curve(self):
@@ -150,7 +212,7 @@ class ModelEvaluator:
         plt.legend(loc="lower left")
         plt.grid(True, alpha=0.3)
         plt.tight_layout()
-        plt.savefig('models/precision_recall_curve.png', dpi=300, bbox_inches='tight')
+        plt.savefig('results/evaluation/precision_recall_curve.png', dpi=300, bbox_inches='tight')
         plt.show()
         
     def analyze_feature_importance(self):
@@ -182,7 +244,7 @@ class ModelEvaluator:
         plt.title('Top 15 Feature Importances')
         plt.gca().invert_yaxis()
         plt.tight_layout()
-        plt.savefig('models/feature_importance.png', dpi=300, bbox_inches='tight')
+        plt.savefig('results/evaluation/feature_importance.png', dpi=300, bbox_inches='tight')
         plt.show()
         
         self.evaluation_results['feature_importance'] = importance_df.to_dict('records')
@@ -205,7 +267,7 @@ class ModelEvaluator:
         
         # Save report
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        report_path = f"models/evaluation_report_{timestamp}.json"
+        report_path = f"results/evaluation/evaluation_report_{timestamp}.json"
         
         with open(report_path, 'w') as f:
             json.dump(report, f, indent=2, default=str)
@@ -234,23 +296,25 @@ class ModelEvaluator:
 # MAIN EXECUTION
 if __name__ == "__main__":
     # Find the latest model file
-    model_files = [f for f in os.listdir('models') if f.startswith('xgboost_ray_best_') and f.endswith('.pkl')]
+    model_files = [f for f in os.listdir('models/ray') if f.startswith('xgboost_ray_best_') and f.endswith('.pkl')]
     
     if not model_files:
-        print("❌ No model files found in models/ directory")
+        print("❌ No model files found in models/ray directory")
         exit(1)
     
     # Get the latest model
     latest_model = sorted(model_files)[-1]
-    model_path = f"models/{latest_model}"
+    model_path = f"models/ray/{latest_model}"
     
     # Find corresponding metadata file
     timestamp = latest_model.replace('xgboost_ray_best_', '').replace('.pkl', '')
-    metadata_path = f"models/metadata_{timestamp}.json"
-    
+    metadata_path = f"models/ray/metadata_{timestamp}.json"
+
     print(f"📁 Using model: {model_path}")
     if os.path.exists(metadata_path):
         print(f"📄 Using metadata: {metadata_path}")
+    else:
+        print("⚠️ No metadata found for the model.")
     
     # Run evaluation
     evaluator = ModelEvaluator(model_path, metadata_path)
