@@ -38,15 +38,25 @@ print(f"Ray initialized with resources: {ray.cluster_resources()}")
 print(10 * "=" + " PREPROCESS " + 10 * "=") 
 
 # Use the preprocessing function from preprocess.py
-X_train, X_test, y_train, y_test, label_encoders = prepare_xgboost_data()
+X_train, X_val, X_test, y_train, y_val, y_test, label_encoders = prepare_xgboost_data(
+    data_path="data/leads_cleaned.csv",
+    test_size=0.2,
+    val_size=0.2,
+    random_state=123
+)
 
-y_train = y_train.to_numpy() 
-y_test = y_test.to_numpy() 
+
+# Convert validation and test sets to numpy arrays
+y_train = y_train.to_numpy()
+y_val = y_val.to_numpy()
+y_test = y_test.to_numpy()
 
 # Store large objects in the Ray object store
 X_train_ref = ray.put(X_train)
+X_val_ref = ray.put(X_val)
 X_test_ref = ray.put(X_test)
 y_train_ref = ray.put(y_train)
+y_val_ref = ray.put(y_val)
 y_test_ref = ray.put(y_test)
 
 print("Preprocessing completed using imported function!")
@@ -93,9 +103,9 @@ def trainable_xgboost(config):
     
     # Retrieve data from Ray object store
     X_train = ray.get(X_train_ref)
-    X_test = ray.get(X_test_ref)
+    X_val = ray.get(X_val_ref)
     y_train = ray.get(y_train_ref)
-    y_test = ray.get(y_test_ref)
+    y_val = ray.get(y_val_ref)
 
     # Initialize XGB
     model = xgb.XGBClassifier(
@@ -114,14 +124,14 @@ def trainable_xgboost(config):
     # Train model
     model.fit(X_train, y_train)
     
-    # Predictions
-    y_pred = model.predict(X_test)
-    y_pred_proba = model.predict_proba(X_test)[:, 1]
+    # Predictions on validation set
+    y_val_pred = model.predict(X_val)
+    y_val_pred_proba = model.predict_proba(X_val)[:, 1]
 
-    # Metrics
-    f1 = f1_score(y_test, y_pred)
-    recall = recall_score(y_test, y_pred)
-    roc_auc = roc_auc_score(y_test, y_pred_proba)
+    # Metrics on validation set
+    f1 = f1_score(y_val, y_val_pred)
+    recall = recall_score(y_val, y_val_pred)
+    roc_auc = roc_auc_score(y_val, y_val_pred_proba)
     
     # Save checkpoint AFTER training and metrics calculation
     checkpoint_dir = os.path.join("checkpoints", f"trial_{time.time()}")
@@ -215,8 +225,12 @@ import os
 import joblib
 import json
 
-def save_best_model(best_result, X_train, y_train, X_test, y_test):
+def save_best_model(best_result, X_train, y_train, X_val, y_val):
     """Recreate and save the best model with metadata"""
+    
+    # Combine training and validation sets
+    X_full_train = pd.concat([X_train, X_val])
+    y_full_train = pd.concat([y_train, y_val])
     
     # Create models directory
     os.makedirs("models", exist_ok=True)
@@ -230,8 +244,8 @@ def save_best_model(best_result, X_train, y_train, X_test, y_test):
         verbosity=0
     )
     
-    # Retrain on full training set
-    best_model.fit(X_train, y_train)
+    # Retrain on full training set (training + validation)
+    best_model.fit(X_full_train, y_full_train)
     
     # Generate timestamp
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -246,9 +260,9 @@ def save_best_model(best_result, X_train, y_train, X_test, y_test):
         "model_type": "XGBoost_Ray_Tune",
         "best_config": best_result.config,
         "best_metrics": best_result.metrics,
-        "training_samples": len(X_train),
-        "test_samples": len(X_test),
-        "search_algorithm": "Optuna"
+        "training_samples": len(X_full_train),
+        "validation_samples": len(X_val),  # For reference
+        "search_algorithm": "Random Search"
     }
     
     metadata_path = f"models/metadata_{timestamp}.json"
@@ -261,5 +275,9 @@ def save_best_model(best_result, X_train, y_train, X_test, y_test):
     return best_model, model_path, metadata_path
 
 best_model, model_path, metadata_path = save_best_model(
-    best_result, X_train, y_train, X_test, y_test
+    best_result, 
+    X_train, 
+    y_train, 
+    X_val, 
+    y_val
 )

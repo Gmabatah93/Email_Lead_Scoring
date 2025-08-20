@@ -139,8 +139,8 @@ def preprocess_for_xgboost(df):
     
     return X, y, label_encoders
 
-def prepare_xgboost_data(data_path="data/leads_cleaned.csv", test_size=0.2, random_state=123):
-    """Complete data preparation pipeline for XGBoost"""
+def prepare_xgboost_data(data_path="data/leads_cleaned.csv", test_size=0.2, val_size=0.2, random_state=123):
+    """Complete data preparation pipeline for XGBoost with separate test set"""
     
     print(10 * "=" + " XGBOOST PREPROCESSING " + 10 * "=")
     
@@ -153,20 +153,29 @@ def prepare_xgboost_data(data_path="data/leads_cleaned.csv", test_size=0.2, rand
     print("Preprocessing completed!")
     print(f"Ready for XGBoost training with {X.shape[0]} samples and {X.shape[1]} features.\n")
     
-    # Split data for training and validation
-    print("Splitting the data for training...")
-    X_train, X_test, y_train, y_test = train_test_split(
+    # Split data into training + temp (validation + test)
+    print("Splitting the data into training, validation, and test sets...")
+    X_train, X_temp, y_train, y_temp = train_test_split(
         X, y, 
-        test_size=test_size, 
+        test_size=test_size + val_size,  # Combine validation and test sizes
         random_state=random_state,
         stratify=y
     )
+    
+    # Further split temp into validation and test sets
+    X_val, X_test, y_val, y_test = train_test_split(
+        X_temp, y_temp, 
+        test_size=test_size / (test_size + val_size),  # Adjust proportion
+        random_state=random_state,
+        stratify=y_temp
+    )
 
     print(f"Training set: {X_train.shape}")
+    print(f"Validation set: {X_val.shape}")
     print(f"Test set: {X_test.shape}")
     print(f"Training target distribution:\n{y_train.value_counts()}\n")
     
-    return X_train, X_test, y_train, y_test, label_encoders
+    return X_train, X_val, X_test, y_train, y_val, y_test, label_encoders
 
 # EXECUTE PREPROCESSING =======================================================
 print("=" * 50)
