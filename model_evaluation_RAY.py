@@ -1,20 +1,3 @@
-import pandas as pd
-import numpy as np
-import joblib
-import json
-import os
-import matplotlib.pyplot as plt
-import seaborn as sns
-from datetime import datetime
-
-from sklearn.metrics import (
-    classification_report, confusion_matrix, roc_auc_score, 
-    roc_curve, precision_recall_curve, f1_score, precision_score, 
-    recall_score, accuracy_score, average_precision_score
-)
-from sklearn.model_selection import cross_val_score
-import xgboost as xgb
-
 """
 FUTURE ENHANCEMENT: 
 
@@ -77,6 +60,22 @@ Capability vs Alignment
         - Providing explanations for predictions to build trust with stakeholders.
 """
 
+import pandas as pd
+import numpy as np
+import joblib
+import json
+import os
+import matplotlib.pyplot as plt
+import seaborn as sns
+from datetime import datetime
+
+from sklearn.metrics import (
+    classification_report, confusion_matrix, roc_auc_score, 
+    roc_curve, precision_recall_curve, f1_score, precision_score, 
+    recall_score, accuracy_score, average_precision_score
+)
+import xgboost as xgb
+
 class ModelEvaluator:
     """Comprehensive model evaluation class"""
     
@@ -87,6 +86,15 @@ class ModelEvaluator:
         self.model = None
         self.metadata = None
         self.evaluation_results = {}
+        self.output_dir = None  # Directory to store evaluation outputs
+        
+    def create_output_directory(self):
+        """Create a dedicated directory for this evaluation run"""
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        model_name = os.path.basename(self.model_path).replace(".pkl", "")
+        self.output_dir = f"results/evaluation/{model_name}_{timestamp}"
+        os.makedirs(self.output_dir, exist_ok=True)
+        print(f"📂 Created output directory: {self.output_dir}")
         
     def load_model_and_metadata(self):
         """Load the trained model and its metadata"""
@@ -175,8 +183,10 @@ class ModelEvaluator:
         plt.ylabel('True Label')
         plt.xlabel('Predicted Label')
         plt.tight_layout()
-        plt.savefig('results/evaluation/confusion_matrix.png', dpi=300, bbox_inches='tight')
+        output_path = os.path.join(self.output_dir, "confusion_matrix.png")
+        plt.savefig(output_path, dpi=300, bbox_inches='tight')
         plt.show()
+        print(f"✅ Confusion matrix saved: {output_path}")
         
     def plot_roc_curve(self):
         """Plot ROC curve"""
@@ -195,8 +205,10 @@ class ModelEvaluator:
         plt.legend(loc="lower right")
         plt.grid(True, alpha=0.3)
         plt.tight_layout()
-        plt.savefig('results/evaluation/roc_curve.png', dpi=300, bbox_inches='tight')
+        output_path = os.path.join(self.output_dir, "roc_curve.png")
+        plt.savefig(output_path, dpi=300, bbox_inches='tight')
         plt.show()
+        print(f"✅ ROC curve saved: {output_path}")
         
     def plot_precision_recall_curve(self):
         """Plot Precision-Recall curve"""
@@ -212,8 +224,10 @@ class ModelEvaluator:
         plt.legend(loc="lower left")
         plt.grid(True, alpha=0.3)
         plt.tight_layout()
-        plt.savefig('results/evaluation/precision_recall_curve.png', dpi=300, bbox_inches='tight')
+        output_path = os.path.join(self.output_dir, "precision_recall_curve.png")
+        plt.savefig(output_path, dpi=300, bbox_inches='tight')
         plt.show()
+        print(f"✅ Precision-Recall curve saved: {output_path}")
         
     def analyze_feature_importance(self):
         """Analyze and plot feature importance"""
@@ -244,8 +258,10 @@ class ModelEvaluator:
         plt.title('Top 15 Feature Importances')
         plt.gca().invert_yaxis()
         plt.tight_layout()
-        plt.savefig('results/evaluation/feature_importance.png', dpi=300, bbox_inches='tight')
+        output_path = os.path.join(self.output_dir, "feature_importance.png")
+        plt.savefig(output_path, dpi=300, bbox_inches='tight')
         plt.show()
+        print(f"✅ Feature importance saved: {output_path}")
         
         self.evaluation_results['feature_importance'] = importance_df.to_dict('records')
         
@@ -266,9 +282,7 @@ class ModelEvaluator:
         }
         
         # Save report
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        report_path = f"results/evaluation/evaluation_report_{timestamp}.json"
-        
+        report_path = os.path.join(self.output_dir, "evaluation_report.json")
         with open(report_path, 'w') as f:
             json.dump(report, f, indent=2, default=str)
             
@@ -279,6 +293,7 @@ class ModelEvaluator:
         print("🚀 Starting Comprehensive Model Evaluation")
         print("="*60)
         
+        self.create_output_directory()  # Create output directory
         self.load_model_and_metadata()
         self.prepare_data()
         self.generate_predictions()
