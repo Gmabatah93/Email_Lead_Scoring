@@ -1,4 +1,5 @@
 import pandas as pd
+import numpy as np
 from sklearn.metrics import f1_score, recall_score, roc_auc_score
 import xgboost as xgb
 import time
@@ -17,15 +18,21 @@ from ray.air import session
 # Import preprocessing functions from your preprocess file
 from preprocess import prepare_xgboost_data
 
-# MLFLOW: Setup ============================================================
-print(10 * "=" + " MLFLOW SETUP " + 10 * "=")
+# SETUP ============================================================
+print(20 * "=" + "SETUP " + 20 * "=")
 
+# MLflow setup
 mlflow.set_tracking_uri("file:./mlruns")
-# mlflow.set_experiment("xgboost_ray_experiment")
 print(f"MLflow tracking URI: {mlflow.get_tracking_uri()}")
-print(f"MLflow experiment: {mlflow.get_experiment_by_name('xgboost_ray_experiment')}")
 
-# PREPROCESS ============================================================
+experiment_name = f"xgboost_ray_experiment_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+print(f"Experiment name: {experiment_name}")
+
+# Define the metric to optimize
+METRIC = "roc_auc"
+print(f"Using metric: {METRIC} for optimization")
+
+# Initialize Ray
 ray.init(
     num_cpus=6,
     object_store_memory=2_000_000_000,
@@ -35,7 +42,8 @@ ray.init(
 )
 print(f"Ray initialized with resources: {ray.cluster_resources()}")
 
-print(10 * "=" + " PREPROCESS " + 10 * "=") 
+# PREPROCESS ============================================================
+print(20 * "=" + " PREPROCESS " + 20 * "=")
 
 # Use the preprocessing function from preprocess.py
 X_train, X_val, X_test, y_train, y_val, y_test, label_encoders = prepare_xgboost_data(
@@ -56,7 +64,7 @@ y_train = y_train.to_numpy()
 y_val = y_val.to_numpy()
 y_test = y_test.to_numpy()
 
-# Store large objects in the Ray object store
+# Store large objects in the Ray object store (for efficient distributed access)
 X_train_ref = ray.put(X_train)
 X_val_ref = ray.put(X_val)
 X_test_ref = ray.put(X_test)
@@ -68,30 +76,7 @@ print("Preprocessing completed using imported function!")
 print(f"Ready for XGBoost training with {X_train.shape[0]} training samples.")
 
 # XGBoost: Function ===================================================
-METRIC = "roc_auc"
-
-# RAY: Run Configuration
-experiment_name = f"xgboost_ray_experiment_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
-print(f"Experiment name: {experiment_name}")
-
-run_config=tune.RunConfig(
-        name='RAY_xgboost_els_auc_random',
-        storage_path='/Users/isiomamabatah/Desktop/Python/Projects/Email_Lead_Scoring/results',
-        callbacks=[
-            MLflowLoggerCallback(
-                tracking_uri="file:./mlruns",
-                experiment_name=experiment_name,
-                save_artifact=True,
-                tags={"algorithm": "random_search", "model": "xgboost"}
-            )
-        ],
-        checkpoint_config = CheckpointConfig(
-            num_to_keep=1,  # Keep only the best checkpoint
-            checkpoint_score_attribute=METRIC,  # Metric to monitor
-            checkpoint_score_order="max"  # Higher roc_auc is better
-        )
-
-)
+print(20 * "=" + " XGBoost: Trainable " + 20 * "=")
 
 # Custom metrics
 trial_counter = Counter("xgboost_trials_total", description="Total XGBoost trials completed")
@@ -153,11 +138,31 @@ def trainable_xgboost(config):
     # Report to Ray
     tune.report({"f1": f1, "recall": recall, "roc_auc": roc_auc})
 
-# RAY: Tune ===========================================================
-print(10 * "=" + f"RAY TUNE: {METRIC}" + 10 * "=")
+print("🔥 XGBoost trainable function defined with Ray Tune and Prometheus metrics!")
 
-# Initialize Ray
-print(f"Ray initialized with resources: {ray.cluster_resources()}")
+# RAY: Tune ===========================================================
+print(20 * "=" + f" RAY TUNE: {METRIC} " + 20 * "=")
+
+# RAY: Run Configuration
+run_config=tune.RunConfig(
+        name=f"RAY_xgboost_els_{METRIC}_random",
+        storage_path='/Users/isiomamabatah/Desktop/Python/Projects/Email_Lead_Scoring/results',
+        callbacks=[
+            MLflowLoggerCallback(
+                tracking_uri="file:./mlruns",
+                experiment_name=experiment_name,
+                save_artifact=True,
+                tags={"algorithm": "random_search", "model": "xgboost"}
+            )
+        ],
+        checkpoint_config = CheckpointConfig(
+            num_to_keep=1,  # Keep only the best checkpoint
+            checkpoint_score_attribute=METRIC,  # Metric to monitor
+            checkpoint_score_order="max"  # Higher roc_auc is better
+        )
+
+)
+print("🔥 Ray Tune run configuration set with MLflow logging and checkpointing.")
 
 # RAY: Search Space
 search_space = {
@@ -167,7 +172,7 @@ search_space = {
     'subsample': tune.uniform(0.7, 1.0),
     'colsample_bytree': tune.uniform(0.7, 1.0)
 }
-print("Ray Tune Search Space complete!")
+print("🔥 Ray Tune Search Space complete!")
 
 # RAY: Tune Configuration
 tune_config = tune.TuneConfig(
@@ -177,29 +182,30 @@ tune_config = tune.TuneConfig(
     max_concurrent_trials=6,
     search_alg=BasicVariantGenerator(random_state=42) 
 )
-print("Ray Tune configuration set with Random Search algorithm.")
+print("🔥 Ray Tune configuration set with Random Search algorithm.")
 
 # Run Ray Tune: 
 # - Random Search Algorithm
-print("Starting Ray Tune hyperparameter optimization...")
 tuner_Random = tune.Tuner(
     trainable=trainable_xgboost,
     tune_config=tune_config,
     param_space=search_space,
     run_config=run_config
 )
-
+print("🔥 Ray Tune tuner initialized with Random Search algorithm.")
 # RAY: Scheduler (Explore FUTURE)
 
 # Execute the tuning
+print("🤞🏾 Starting Ray Tune hyperparameter optimization...")
 results_Random = tuner_Random.fit()
+print("✅ Ray Tune hyperparameter optimization completed!")
 
 # RESULTS ===========================================================
-print(10 * "=" + " RESULTS " + 10 * "=")
+print(20 * "=" + " RESULTS " + 20 * "=")
 
 best_result = results_Random.get_best_result(metric=METRIC, mode="max")
-print("Best trial config:", best_result.config)
-print("Best trial metrics:", best_result.metrics)
+print("📝 Best trial config:", best_result.config)
+print("📝 Best trial metrics:", best_result.metrics)
 
 # Checkpoint
 best_result.best_checkpoints
@@ -208,20 +214,22 @@ best_result.best_checkpoints
 # Get all results for deeper analysis
 df_results = results_Random.get_dataframe()
 sorted_df = df_results.sort_values(by="roc_auc", ascending=False)
-print(f"\nTotal trials completed: {len(df_results)}")
-print(f"Best ROC AUC achieved: {df_results['roc_auc'].max():.4f}")
-print(f"Average ROC AUC: {df_results['roc_auc'].mean():.4f}")
+print(f"\n📝 Total trials completed: {len(df_results)}")
+print(f"📝 Best ROC AUC achieved: {df_results['roc_auc'].max():.4f}")
+print(f"📝 Average ROC AUC: {df_results['roc_auc'].mean():.4f}")
 
-# MLFLOW: Log Best Result
-print(10 * "=" + " MLFLOW LOG BEST RESULT " + 10 * "=")
-
+# Mlflow Logging 
 sorted_runs = mlflow.search_runs(
     experiment_names=[experiment_name],
     order_by=[f"metrics.{METRIC} DESC"]
 )
 mlflow.log_params(best_result.config)
-mlflow.log_metrics(best_result.metrics)
-print("✅ Best trial logged to MLflow!")
+# Filter out non-numeric values from the metrics dictionary
+numeric_metrics = {k: v for k, v in best_result.metrics.items() if isinstance(v, (int, float))}
+# Log only numeric metrics to MLflow
+mlflow.log_metrics(numeric_metrics)
+
+print("📝 Best trial logged to MLflow!")
 
 
 
@@ -232,6 +240,16 @@ import json
 
 def save_best_model(best_result, X_train, y_train, X_val, y_val):
     """Recreate and save the best model with metadata"""
+    
+    # Convert NumPy arrays to pandas DataFrames/Series if necessary
+    if isinstance(X_train, np.ndarray):
+        X_train = pd.DataFrame(X_train)
+    if isinstance(X_val, np.ndarray):
+        X_val = pd.DataFrame(X_val)
+    if isinstance(y_train, np.ndarray):
+        y_train = pd.Series(y_train)
+    if isinstance(y_val, np.ndarray):
+        y_val = pd.Series(y_val)
     
     # Combine training and validation sets
     X_full_train = pd.concat([X_train, X_val])
