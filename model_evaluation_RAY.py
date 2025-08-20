@@ -15,9 +15,6 @@ from sklearn.metrics import (
 from sklearn.model_selection import cross_val_score
 import xgboost as xgb
 
-# Import preprocessing to get the same data splits
-from preprocess import prepare_xgboost_data
-
 class ModelEvaluator:
     """Comprehensive model evaluation class"""
     
@@ -50,12 +47,12 @@ class ModelEvaluator:
         print("PREPARING EVALUATION DATA")
         print("="*50)
         
-        # Get the same data splits used in training
-        self.X_train, self.X_test, self.y_train, self.y_test, self.label_encoders = prepare_xgboost_data()
+        # Load the test set from CSV files
+        self.X_test = pd.read_csv("data/X_test.csv")
+        self.y_test = pd.read_csv("data/y_test.csv")
         
-        print(f"Training samples: {len(self.X_train)}")
         print(f"Test samples: {len(self.X_test)}")
-        print(f"Features: {self.X_train.shape[1]}")
+        print(f"Features: {self.X_test.shape[1]}")
         
     def generate_predictions(self):
         """Generate predictions on test set"""
@@ -164,7 +161,7 @@ class ModelEvaluator:
         
         # Get feature importance
         importance = self.model.feature_importances_
-        feature_names = self.X_train.columns if hasattr(self.X_train, 'columns') else [f'feature_{i}' for i in range(len(importance))]
+        feature_names = self.X_test.columns if hasattr(self.X_test, 'columns') else [f'feature_{i}' for i in range(len(importance))]
         
         # Create importance dataframe
         importance_df = pd.DataFrame({
@@ -190,61 +187,6 @@ class ModelEvaluator:
         
         self.evaluation_results['feature_importance'] = importance_df.to_dict('records')
         
-    def cross_validation_analysis(self):
-        """Perform cross-validation analysis"""
-        print("\n" + "="*50)
-        print("CROSS-VALIDATION ANALYSIS")
-        print("="*50)
-        
-        # Combine train and test for full dataset CV
-        X_full = pd.concat([self.X_train, self.X_test])
-        y_full = pd.concat([self.y_train, self.y_test])
-        
-        # 5-fold cross validation
-        cv_scores = cross_val_score(self.model, X_full, y_full, cv=5, scoring='roc_auc')
-        
-        print(f"5-Fold Cross-Validation ROC AUC Scores:")
-        for i, score in enumerate(cv_scores, 1):
-            print(f"  Fold {i}: {score:.4f}")
-        print(f"Mean CV Score: {cv_scores.mean():.4f} (+/- {cv_scores.std() * 2:.4f})")
-        
-        self.evaluation_results['cv_scores'] = {
-            'individual_scores': cv_scores.tolist(),
-            'mean_score': cv_scores.mean(),
-            'std_score': cv_scores.std()
-        }
-        
-    def business_impact_analysis(self):
-        """Analyze business impact of the model"""
-        print("\n" + "="*50)
-        print("BUSINESS IMPACT ANALYSIS")
-        print("="*50)
-        
-        # Conversion rate analysis
-        total_samples = len(self.y_test)
-        actual_positives = self.y_test.sum()
-        predicted_positives = self.y_pred.sum()
-        true_positives = ((self.y_test == 1) & (self.y_pred == 1)).sum()
-        
-        baseline_conversion = actual_positives / total_samples
-        predicted_conversion = predicted_positives / total_samples
-        precision_score = true_positives / predicted_positives if predicted_positives > 0 else 0
-        
-        print(f"Baseline Conversion Rate: {baseline_conversion:.2%}")
-        print(f"Model Predicted Conversion Rate: {predicted_conversion:.2%}")
-        print(f"Precision (True Conversion Rate): {precision_score:.2%}")
-        
-        # If we only target predicted positives, what's our efficiency?
-        efficiency_gain = (precision_score / baseline_conversion) if baseline_conversion > 0 else 0
-        print(f"Targeting Efficiency: {efficiency_gain:.2f}x baseline")
-        
-        self.evaluation_results['business_metrics'] = {
-            'baseline_conversion_rate': baseline_conversion,
-            'predicted_conversion_rate': predicted_conversion,
-            'precision_score': precision_score,
-            'efficiency_gain': efficiency_gain
-        }
-        
     def save_evaluation_report(self):
         """Save comprehensive evaluation report"""
         print("\n" + "="*50)
@@ -258,8 +200,7 @@ class ModelEvaluator:
             'metadata_path': self.metadata_path,
             'model_metadata': self.metadata,
             'evaluation_results': self.evaluation_results,
-            'test_set_size': len(self.y_test),
-            'training_set_size': len(self.y_train)
+            'test_set_size': len(self.y_test)
         }
         
         # Save report
@@ -284,8 +225,6 @@ class ModelEvaluator:
         self.plot_roc_curve()
         self.plot_precision_recall_curve()
         self.analyze_feature_importance()
-        self.cross_validation_analysis()
-        self.business_impact_analysis()
         self.save_evaluation_report()
         
         print("\n" + "="*60)

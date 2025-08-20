@@ -45,6 +45,11 @@ X_train, X_val, X_test, y_train, y_val, y_test, label_encoders = prepare_xgboost
     random_state=123
 )
 
+# Save the test set to CSV files
+X_test.to_csv("data/X_test.csv", index=False)
+y_test.to_csv("data/y_test.csv", index=False)
+
+print("✅ Test set saved to 'data/X_test.csv' and 'data/y_test.csv'")
 
 # Convert validation and test sets to numpy arrays
 y_train = y_train.to_numpy()
