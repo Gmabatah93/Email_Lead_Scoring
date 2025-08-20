@@ -71,16 +71,49 @@
 - **Train/Test Split**: 80/20 stratified split maintaining target class distribution
 - **Output**: Clean feature matrix ready for model training across multiple frameworks
 
-## Model Training 
-- **Hyperparameter Optimization:** Random Search & Bayesian
-
+## Model Training
+- **Framework**: XGBoost with Ray Tune for distributed hyperparameter optimization.
+- **Hyperparameter Optimization**:
+  - **Search Algorithms**: Random Search and Bayesian Optimization.
+  - **Search Space**:
+    - `max_depth`: Range [3, 8]
+    - `learning_rate`: Range [0.01, 0.3]
+    - `n_estimators`: Range [50, 200]
+    - `subsample`: Range [0.7, 1.0]
+    - `colsample_bytree`: Range [0.7, 1.0]
+  - **Metric**: Optimized for `roc_auc`.
+  - **Trials**: 24 trials with 6 workers for parallel execution.
+- **Data Splitting**:
+  - Training: 60%
+  - Validation: 20%
+  - Test: 20%
+  - Stratified splits to maintain target class distribution.
+- **Output**:
+  - Best model saved to `models/ray/` with metadata.
+  - Preprocessed test set saved to `data/X_test.csv` and `data/y_test.csv`.
 
 ## Model Tuning
+- **Ray Tune Integration**:
+  - Distributed tuning with Prometheus metrics for monitoring.
+  - Custom metrics tracked: `f1_score`, `recall`, and `roc_auc`.
+- **Checkpointing**:
+  - Best model checkpoint saved during tuning for reproducibility.
+  - Checkpoints stored in `checkpoints/` directory.
 
 ## Model Evaluation
 ### Offline
-- **Holdout**
+- **Holdout Evaluation**:
+  - Metrics evaluated on the test set:
+    - **ROC AUC**: Primary metric for model performance.
+    - **F1 Score**: Balances precision and recall.
+    - **Recall**: Focused on minimizing false negatives.
+  - Results logged to MLflow for tracking and analysis.
+- **Cross-Validation**:
+  - Validation set used during hyperparameter tuning to avoid overfitting.
 
 ### Online
-
+- **Future Scope**:
+  - A/B testing for real-world performance evaluation.
+  - Integration with production systems for live scoring.
+  
 ## Model Testing 
