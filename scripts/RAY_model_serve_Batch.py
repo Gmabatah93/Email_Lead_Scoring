@@ -3,7 +3,7 @@ import joblib
 import pandas as pd
 import numpy as np
 
-@serve.deployment(num_replicas=2, route_prefix="/predict")
+@serve.deployment(num_replicas=2)
 class XGBoostModel:
     def __init__(self, model_path):
         # Load the trained model
@@ -19,5 +19,5 @@ class XGBoostModel:
         return predictions.tolist()
 
 # Deploy the model
-model_path = "models/ray/xgboost_ray_best_20250820_091847.pkl"
-XGBoostModel.deploy(model_path)
+model_path = "models/ray/xgboost_ray_best_20250820_112607.pkl"
+serve.run(XGBoostModel.bind(model_path), name="XGBoostModel", route_prefix="/predict")
