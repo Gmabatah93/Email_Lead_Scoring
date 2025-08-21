@@ -2,22 +2,28 @@ import pandas as pd
 import sqlalchemy as sql
 import janitor as jn
 import re 
+from typing import Tuple, Dict, Any
 
 from sklearn.preprocessing import LabelEncoder
 from sklearn.model_selection import train_test_split
 
 # LOAD AND PREPARE TAG DATA ===================================================
-def merge_tags_with_leads(df_raw, db_path="data/crm_database.sqlite", output_path="data/leads_raw.csv"):
+def merge_tags_with_leads(
+    df_raw: pd.DataFrame, 
+    db_path: str = "data/crm_database.sqlite", 
+    output_path: str = "data/leads_raw.csv"
+) -> pd.DataFrame:
     """
-    Merge raw leads data with tag data from the database and save to CSV.
-    
+    Merge raw leads DataFrame with tag data from a SQLite database, transform tags to wide format,
+    and save the merged DataFrame to a CSV file.
+
     Args:
-        df_raw (pd.DataFrame): Raw leads dataframe.
-        db_path (str): Path to the SQLite database.
-        output_path (str): Path to save the merged CSV.
-        
+        df_raw (pd.DataFrame): Raw leads DataFrame.
+        db_path (str, optional): Path to the SQLite database. Defaults to "data/crm_database.sqlite".
+        output_path (str, optional): Path to save the merged CSV. Defaults to "data/leads_raw.csv".
+
     Returns:
-        pd.DataFrame: Merged dataframe.
+        pd.DataFrame: Merged DataFrame with tag columns.
     """
     with sql.create_engine(f"sqlite:///{db_path}").connect() as conn:
         tags_df = pd.read_sql("SELECT * FROM Tags", conn)
@@ -51,13 +57,13 @@ def merge_tags_with_leads(df_raw, db_path="data/crm_database.sqlite", output_pat
 # PREPROCESSING FUNCTIONS =====================================================
 def preprocess_leads(df: pd.DataFrame) -> pd.DataFrame:
     """
-    Complete preprocessing pipeline for email leads data.
-    
+    Apply feature engineering and cleaning steps to the leads DataFrame.
+
     Args:
-        df: Raw dataframe with subscriber data
-        
+        df (pd.DataFrame): Raw DataFrame with subscriber data.
+
     Returns:
-        Preprocessed dataframe ready for ML
+        pd.DataFrame: Preprocessed DataFrame ready for machine learning.
     """
     print("⚙️ Starting preprocessing...")
     df_processed = df.copy()
@@ -109,8 +115,19 @@ def preprocess_leads(df: pd.DataFrame) -> pd.DataFrame:
 
     return df_processed
 
-def preprocess_for_xgboost(df):
-    """XGBoost-specific preprocessing"""
+def preprocess_for_xgboost(df: pd.DataFrame) -> Tuple[pd.DataFrame, pd.Series, Dict[str, LabelEncoder]]:
+    """
+    Prepare features and target for XGBoost, including label encoding and column removal.
+
+    Args:
+        df (pd.DataFrame): Preprocessed DataFrame.
+
+    Returns:
+        Tuple[pd.DataFrame, pd.Series, Dict[str, LabelEncoder]]:
+            - X: Features DataFrame.
+            - y: Target Series.
+            - label_encoders: Dictionary of fitted LabelEncoders for categorical columns.
+    """
     
     df_processed = df.copy()
     
@@ -152,9 +169,32 @@ def preprocess_for_xgboost(df):
     
     return X, y, label_encoders
 
-def prepare_xgboost_data(data_path="data/leads_cleaned.csv", test_size=0.2, val_size=0.2, random_state=123):
-    """Complete data preparation pipeline for XGBoost with separate test set"""
-    
+def prepare_xgboost_data(
+    data_path: str = "data/leads_cleaned.csv", 
+    test_size: float = 0.2, 
+    val_size: float = 0.2, 
+    random_state: int = 123
+) -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.Series, pd.Series, pd.Series, Dict[str, LabelEncoder]]:
+    """
+    Complete data preparation pipeline for XGBoost, including loading, preprocessing,
+    and splitting into train, validation, and test sets.
+
+    Args:
+        data_path (str, optional): Path to the cleaned leads CSV. Defaults to "data/leads_cleaned.csv".
+        test_size (float, optional): Proportion of data for test set. Defaults to 0.2.
+        val_size (float, optional): Proportion of data for validation set. Defaults to 0.2.
+        random_state (int, optional): Random seed for reproducibility. Defaults to 123.
+
+    Returns:
+        Tuple containing:
+            - X_train (pd.DataFrame): Training features.
+            - X_val (pd.DataFrame): Validation features.
+            - X_test (pd.DataFrame): Test features.
+            - y_train (pd.Series): Training target.
+            - y_val (pd.Series): Validation target.
+            - y_test (pd.Series): Test target.
+            - label_encoders (Dict[str, LabelEncoder]): Label encoders for categorical columns.
+    """
     print(10 * "=" + " PREPROCESS: XGBoost " + 10 * "=")
     
     # Load data
