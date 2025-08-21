@@ -1,3 +1,9 @@
+"""
+FUTURE ENHANCEMENT:
+- turn into a cli app
+- making hardcoded values configurable via command line arguments
+"""
+
 import pandas as pd
 import numpy as np
 from sklearn.metrics import f1_score, recall_score, roc_auc_score
