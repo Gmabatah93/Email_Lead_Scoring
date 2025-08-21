@@ -14,6 +14,7 @@ import mlflow
 import joblib
 import os
 import json
+from typing import Tuple, Dict, Any
 
 import ray
 from ray import tune
@@ -26,8 +27,17 @@ from ray.air import session
 # Import preprocessing functions from your preprocess file
 from preprocess import prepare_xgboost_data, preprocess_leads
 
-def trainable_xgboost(config):
-    """Train XGBoost model with Ray Tune and Prometheus metrics"""
+def trainable_xgboost(config: Dict[str, Any]) -> None:
+    """
+    Train an XGBoost model using Ray Tune for hyperparameter optimization.
+
+    Args:
+        config (Dict[str, Any]): Hyperparameter configuration for the XGBoost model.
+
+    Returns:
+        None. Reports metrics to Ray Tune and saves model checkpoints.
+    """
+    
     start_time = time.time()
     
     # Retrieve data from Ray object store
@@ -76,8 +86,30 @@ def trainable_xgboost(config):
     # Report to Ray
     tune.report({"f1": f1, "recall": recall, "roc_auc": roc_auc})
 
-def save_best_model(best_result, X_train, y_train, X_val, y_val, timestamp):
-    """Recreate and save the best model with metadata"""
+def save_best_model(
+        best_result: Any, 
+        X_train: pd.DataFrame, 
+        y_train: pd.Series, 
+        X_val: pd.DataFrame, 
+        y_val: pd.Series, 
+        timestamp: str) -> Tuple[xgb.XGBClassifier, str, str]:
+    """
+    Recreate and save the best XGBoost model using the best hyperparameters found by Ray Tune.
+
+    Args:
+        best_result (Any): Ray Tune result object containing best config and metrics.
+        X_train (pd.DataFrame): Training features.
+        y_train (pd.Series): Training target.
+        X_val (pd.DataFrame): Validation features.
+        y_val (pd.Series): Validation target.
+        timestamp (str): Timestamp string for file naming.
+
+    Returns:
+        Tuple containing:
+            - best_model (xgb.XGBClassifier): The retrained best model.
+            - model_path (str): Path to the saved model file.
+            - metadata_path (str): Path to the saved metadata JSON file.
+    """
     
     # Convert NumPy arrays to pandas DataFrames/Series if necessary
     if isinstance(X_train, np.ndarray):

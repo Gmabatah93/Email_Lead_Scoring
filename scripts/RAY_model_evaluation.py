@@ -87,6 +87,7 @@ import os
 import matplotlib.pyplot as plt
 import seaborn as sns
 from datetime import datetime
+from typing import Optional, Dict, Any
 
 from sklearn.metrics import (
     classification_report, confusion_matrix, roc_auc_score, 
@@ -96,10 +97,20 @@ from sklearn.metrics import (
 import xgboost as xgb
 
 class ModelEvaluator:
-    """Comprehensive model evaluation class"""
-    
-    def __init__(self, model_path, metadata_path=None):
-        """Initialize evaluator with model and metadata paths"""
+    """
+    Comprehensive model evaluation class for XGBoost models.
+    Handles loading models, preparing data, generating predictions,
+    computing metrics, plotting, and saving evaluation reports.
+    """
+
+    def __init__(self, model_path: str, metadata_path: Optional[str] = None):
+        """
+        Initialize the evaluator with model and metadata paths.
+
+        Args:
+            model_path (str): Path to the trained model file (.pkl).
+            metadata_path (Optional[str]): Path to the model metadata JSON file.
+        """
         self.model_path = model_path
         self.metadata_path = metadata_path
         self.model = None
@@ -107,17 +118,20 @@ class ModelEvaluator:
         self.evaluation_results = {}
         self.output_dir = None  # Directory to store evaluation outputs
         
-    def create_output_directory(self):
-        """Create a dedicated directory for this evaluation run"""
+    def create_output_directory(self) -> None:
+        """
+        Create a dedicated directory for this evaluation run.
+        """
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         model_name = os.path.basename(self.model_path).replace(".pkl", "")
         self.output_dir = f"results/evaluation/{model_name}_{timestamp}"
         os.makedirs(self.output_dir, exist_ok=True)
         print(f"📂 Created output directory: {self.output_dir}")
-        
-    def load_model_and_metadata(self):
-        """Load the trained model and its metadata"""
-        # Load model
+
+    def load_model_and_metadata(self) -> None:
+        """
+        Load the trained model and its metadata (if available).
+        """
         self.model = joblib.load(self.model_path)
         print(f"✅ Model loaded from: {self.model_path}")
         
@@ -130,8 +144,10 @@ class ModelEvaluator:
         else:
             print("⚠️ No metadata file found")
     
-    def prepare_data(self):
-        """Prepare evaluation datasets"""
+    def prepare_data(self) -> None:
+        """
+        Prepare evaluation datasets by loading test features and labels.
+        """
         print("\n" + "="*50)
         print("PREPARING EVALUATION DATA")
         print("="*50)
@@ -142,9 +158,11 @@ class ModelEvaluator:
         
         print(f"Test samples: {len(self.X_test)}")
         print(f"Features: {self.X_test.shape[1]}")
-        
-    def generate_predictions(self):
-        """Generate predictions on test set"""
+
+    def generate_predictions(self) -> None:
+        """
+        Generate predictions and predicted probabilities on the test set.
+        """
         print("\n" + "="*50)
         print("GENERATING PREDICTIONS")
         print("="*50)
@@ -154,9 +172,12 @@ class ModelEvaluator:
         self.y_pred_proba = self.model.predict_proba(self.X_test)[:, 1]
         
         print("✅ Predictions generated")
-        
-    def evaluate_classification_metrics(self):
-        """Calculate comprehensive classification metrics"""
+
+    def evaluate_classification_metrics(self) -> None:
+        """
+        Calculate and print comprehensive classification metrics.
+        Stores results in self.evaluation_results.
+        """
         print("\n" + "="*50)
         print("CLASSIFICATION METRICS")
         print("="*50)
@@ -191,8 +212,10 @@ class ModelEvaluator:
         print("\nDetailed Classification Report:")
         print(classification_report(self.y_test, self.y_pred))
         
-    def plot_confusion_matrix(self):
-        """Plot confusion matrix"""
+    def plot_confusion_matrix(self) -> None:
+        """
+        Plot and save the confusion matrix as a PNG file.
+        """
         plt.figure(figsize=(8, 6))
         cm = confusion_matrix(self.y_test, self.y_pred)
         sns.heatmap(cm, annot=True, fmt='d', cmap='Blues', 
@@ -207,8 +230,10 @@ class ModelEvaluator:
         plt.show()
         print(f"✅ Confusion matrix saved: {output_path}")
         
-    def plot_roc_curve(self):
-        """Plot ROC curve"""
+    def plot_roc_curve(self) -> None:
+        """
+        Plot and save the ROC curve as a PNG file.
+        """
         fpr, tpr, _ = roc_curve(self.y_test, self.y_pred_proba)
         roc_auc = roc_auc_score(self.y_test, self.y_pred_proba)
         
@@ -228,9 +253,11 @@ class ModelEvaluator:
         plt.savefig(output_path, dpi=300, bbox_inches='tight')
         plt.show()
         print(f"✅ ROC curve saved: {output_path}")
-        
-    def plot_precision_recall_curve(self):
-        """Plot Precision-Recall curve"""
+
+    def plot_precision_recall_curve(self) -> None:
+        """
+        Plot and save the Precision-Recall curve as a PNG file.
+        """
         precision, recall, _ = precision_recall_curve(self.y_test, self.y_pred_proba)
         avg_precision = average_precision_score(self.y_test, self.y_pred_proba)
         
@@ -247,9 +274,11 @@ class ModelEvaluator:
         plt.savefig(output_path, dpi=300, bbox_inches='tight')
         plt.show()
         print(f"✅ Precision-Recall curve saved: {output_path}")
-        
-    def analyze_feature_importance(self):
-        """Analyze and plot feature importance"""
+
+    def analyze_feature_importance(self) -> None:
+        """
+        Analyze and plot feature importances. Saves plot and stores importances in evaluation_results.
+        """
         print("\n" + "="*50)
         print("FEATURE IMPORTANCE ANALYSIS")
         print("="*50)
@@ -284,8 +313,10 @@ class ModelEvaluator:
         
         self.evaluation_results['feature_importance'] = importance_df.to_dict('records')
         
-    def save_evaluation_report(self):
-        """Save comprehensive evaluation report"""
+    def save_evaluation_report(self) -> None:
+        """
+        Save a comprehensive evaluation report as a JSON file.
+        """
         print("\n" + "="*50)
         print("SAVING EVALUATION REPORT")
         print("="*50)
@@ -306,9 +337,12 @@ class ModelEvaluator:
             json.dump(report, f, indent=2, default=str)
             
         print(f"✅ Evaluation report saved: {report_path}")
-        
-    def run_full_evaluation(self):
-        """Run complete evaluation pipeline"""
+
+    def run_full_evaluation(self) -> None:
+        """
+        Run the complete evaluation pipeline: directory creation, model loading,
+        data preparation, prediction, metrics, plots, feature importance, and report saving.
+        """
         print("🚀 Starting Comprehensive Model Evaluation")
         print("="*60)
         

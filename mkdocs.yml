@@ -1,0 +1,14 @@
+site_name: Email Lead Scoring
+nav:
+  - Home: index.md
+  - Preprocessing: els/preprocess.md
+  - Model Training & Tuning: els/RAY_model_xgboost.md
+  - Model Evaluation: els/RAY_model_evaluation.md
+
+plugins:
+  - search
+  - mkdocstrings:
+      handlers:
+        python:
+          setup_commands:
+            - import sys; sys.path.append('scripts')
