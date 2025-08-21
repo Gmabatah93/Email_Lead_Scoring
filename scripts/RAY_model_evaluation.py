@@ -60,6 +60,25 @@ Capability vs Alignment
         - Providing explanations for predictions to build trust with stakeholders.
 """
 
+
+"""
+Why Use a Class for Model Evaluation?
+1. Stateful Operations:
+    - Evaluation involves loading a model, metadata, test data, generating predictions, storing results, and saving plots/reports.
+    - A class allows you to keep all this state (self.model, self.X_test, self.evaluation_results, etc.) together, making the code cleaner and less error-prone.
+2. Grouping Related Methods:
+    - All evaluation steps (metrics, plots, reports) are logically related and operate on the same data.
+    - A class groups these methods, so you don’t have to pass the same arguments around repeatedly.
+3. Extensibility:
+    - If you want to add more evaluation features (e.g., calibration, slicing, interpretability), you can easily add new methods to the class.
+4. Reusability:
+    - You can instantiate ModelEvaluator for different models or datasets without rewriting code.
+
+Why Not Use Classes for Preprocessing/Training?
+- Preprocessing and training in your scripts are mostly stateless, linear pipelines.
+- Functions are sufficient and simpler for these steps, as you don’t need to maintain or share much state between them.
+"""
+
 import pandas as pd
 import numpy as np
 import joblib
