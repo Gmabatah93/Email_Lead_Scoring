@@ -1,25 +1,37 @@
 import pandas as pd
 import sqlalchemy as sql
-import argparse
+import typer
+from typing_extensions import Annotated
+from pathlib import Path
 
-def main(output_path="data/subscribers_joined.csv", verbose=False):
-    print("=" * 50)
-    print("DATA INGESTTION")
-    print("=" * 50)
+app = typer.Typer()
+
+@app.command()
+def main(
+    output_path: Annotated[Path, typer.Option(help="Path to save the processed CSV file")] = "data/subscribers_joined.csv",
+    verbose: Annotated[bool, typer.Option(help="Enable verbose output")] = False,
+    db_path: Annotated[Path, typer.Option(help="Path to SQLite database")] = "data/crm_database.sqlite"
+):
+    """Ingest and process CRM data from a SQLite database, then save the cleaned and merged data to a CSV file."""
+    
+    typer.echo("=" * 50)
+    typer.echo(typer.style("DATA INGESTION", fg=typer.colors.CYAN))
+    typer.echo("=" * 50)
 
     # 1 Connect to the database ----
-    url = "sqlite:///data/crm_database.sqlite"
+    url = f"sqlite:///{db_path}"
     engine = sql.create_engine(url)
-    print(f"✅ Connected to database: {url}")
-
+    typer.echo(typer.style(f"✅ Connected to database: {url}\n", fg=typer.colors.GREEN))
+    
     with engine.connect() as conn:
         # Subscribers        
         subscribers_df = pd.read_sql("SELECT * FROM Subscribers", conn)
 
         if verbose:
-            print(f"📊 Raw subscribers shape: {subscribers_df.shape}")
-            print(f"📊 Subscribers columns: {list(subscribers_df.columns)}")
-
+            typer.echo('--' * 6 + " 📊 Subscribers " + 6 * "--")
+            typer.echo(typer.style(f"📊 Raw subscribers shape: {subscribers_df.shape}", fg=typer.colors.BLUE))
+            typer.echo(typer.style(f"📊 Subscribers columns: {list(subscribers_df.columns)}", fg=typer.colors.BLUE))
+            typer.echo(typer.style(f"📊 Raw subscribers preview:\n{subscribers_df.head().to_string()}", fg=typer.colors.BLUE))
         # - clean
         subscribers_df['mailchimp_id'] = subscribers_df['mailchimp_id'].astype('int')
         subscribers_df['member_rating'] = subscribers_df['member_rating'].astype('int')
@@ -29,8 +41,10 @@ def main(output_path="data/subscribers_joined.csv", verbose=False):
         tags_df = pd.read_sql("SELECT * FROM Tags", conn)
 
         if verbose:
-            print(f"📊 Raw tags shape: {tags_df.shape}")
-            print(f"📊 Tags columns: {list(tags_df.columns)}")
+            typer.echo('--' * 8 + " 📊 Tags " + 8 * "--")
+            typer.echo(typer.style(f"📊 Raw tags shape: {tags_df.shape}", fg=typer.colors.BLUE))
+            typer.echo(typer.style(f"📊 Tags columns: {list(tags_df.columns)}", fg=typer.colors.BLUE))
+            typer.echo(typer.style(f"📊 Raw tags preview:\n{tags_df.head().to_string()}", fg=typer.colors.BLUE))
         # - clean
         tags_df['mailchimp_id'] = tags_df['mailchimp_id'].astype("int")
         
@@ -38,27 +52,27 @@ def main(output_path="data/subscribers_joined.csv", verbose=False):
         transactions_df = pd.read_sql("SELECT * FROM Transactions", conn)
         
         if verbose:
-            print(f"📊 Raw transactions shape: {transactions_df.shape}")
-            print(f"📊 Transactions columns: {list(transactions_df.columns)}")
+            typer.echo('--' * 6 + " 📊 Transactions " + 6 * "--")
+            typer.echo(typer.style(f"📊 Raw transactions shape: {transactions_df.shape}", fg=typer.colors.BLUE))
+            typer.echo(typer.style(f"📊 Transactions columns: {list(transactions_df.columns)}", fg=typer.colors.BLUE))
+            typer.echo(typer.style(f"📊 Raw transactions preview:\n{transactions_df.head().to_string()}", fg=typer.colors.BLUE))
+            typer.echo('--' * 20)
         # - clean
         transactions_df['purchased_at'] = transactions_df['purchased_at'].astype('datetime64[ns]')
         transactions_df['product_id'] = transactions_df['product_id'].astype('int')
 
-    print("✅ Data loaded from database")
-    print(f"Subscribers: {subscribers_df.shape[0]}")
-    print(f"Tags: {tags_df.shape[0]}")
-    print(f"Transactions: {transactions_df.shape[0]}")
-    
+    typer.echo(typer.style("✅ Data loaded from database", fg=typer.colors.GREEN))
+    typer.echo(f"     - Subscribers: {subscribers_df.shape[0]}")
+    typer.echo(f"     - Tags: {tags_df.shape[0]}")
+    typer.echo(f"     - Transactions: {transactions_df.shape[0]}")
+
     # MERGE TAG COUNTS
     user_events_df = tags_df \
         .groupby('mailchimp_id') \
         .agg(dict(tag = 'count')) \
         .set_axis(['tag_count'], axis=1) \
         .reset_index()
-
-    if verbose:
-        print(f"📊 Tag count distribution: {user_events_df['tag_count'].describe()}")
-
+    
     subscribers_joined_df = subscribers_df \
         .merge(user_events_df, how='left') \
         .fillna(dict(tag_count = 0))
@@ -72,19 +86,22 @@ def main(output_path="data/subscribers_joined.csv", verbose=False):
         .isin(emails_made_purchase) \
         .astype('int')
 
+    # Target Variable Statistics
+    typer.echo(typer.style(f"     🎯 Purchase rate: {subscribers_joined_df['made_purchase'].mean():.2%}", fg=typer.colors.BRIGHT_RED))
+
     if verbose:
-        print(f"📊 Purchase rate: {subscribers_joined_df['made_purchase'].mean():.2%}")
-        print(f"📊 Final dataset shape: {subscribers_joined_df.shape}")
-        
-    print(f"✅ Subscribers joined with tags and purchase info: {subscribers_joined_df.shape[0]}")
+        typer.echo('--' * 6 + " 📊 Subscribers_Joined " + 6 * "--")
+        typer.echo(typer.style(f"📊 Final dataset shape: {subscribers_joined_df.shape}", fg=typer.colors.BLUE))
+        typer.echo(typer.style(f"📊 Final dataset columns: {list(subscribers_joined_df.columns)}", fg=typer.colors.BLUE))
+        typer.echo(typer.style(f"📊 Final dataset preview:\n{subscribers_joined_df.head().to_string()}", fg=typer.colors.BLUE))
+        typer.echo('--' * 20)
+
+    typer.echo(typer.style(f"✅ Subscribers joined with tags and purchase info: {subscribers_joined_df.shape[0]}", fg=typer.colors.GREEN))
 
     subscribers_joined_df.to_csv(output_path, index=False)
-    print(f"✅ Subscribers joined data saved to: {output_path}")
+    typer.echo(typer.style(f"✅ Subscribers joined data saved to: {output_path}", fg=typer.colors.GREEN))
 
+# python scripts/data_ingestion.py --help 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Ingest and process CRM data")
-    parser.add_argument("--output_path", type=str, default="data/subscribers_joined.csv", help="Path to save the processed CSV file")
-    parser.add_argument("--verbose", action="store_true", help="Enable verbose output")
-    
-    args = parser.parse_args()
-    main(output_path=args.output_path, verbose=args.verbose)
+    app()
+
