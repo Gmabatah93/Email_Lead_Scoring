@@ -9,8 +9,7 @@ app = typer.Typer()
 @app.command()
 def main(
     output_path: Annotated[Path, typer.Option(help="Path to save the processed CSV file")] = "data/subscribers_joined.csv",
-    verbose: Annotated[bool, typer.Option(help="Enable verbose output")] = False,
-    db_path: Annotated[Path, typer.Option(help="Path to SQLite database")] = "data/crm_database.sqlite"
+    verbose: Annotated[bool, typer.Option(help="Enable verbose output")] = False
 ):
     """Ingest and process CRM data from a SQLite database, then save the cleaned and merged data to a CSV file."""
     
@@ -19,9 +18,9 @@ def main(
     typer.echo("=" * 50)
 
     # 1 Connect to the database ----
-    url = f"sqlite:///{db_path}"
+    url = f"sqlite:///data/crm_database.sqlite"
     engine = sql.create_engine(url)
-    typer.echo(typer.style(f"✅ Connected to database: {url}\n", fg=typer.colors.GREEN))
+    typer.echo(typer.style(f"✅ Connected to database: data/crm_database.sqlite\n", fg=typer.colors.GREEN))
     
     with engine.connect() as conn:
         # Subscribers        
