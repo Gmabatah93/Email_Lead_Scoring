@@ -32,3 +32,42 @@ SystemDesign.md
 - Clean (datatypes) & Merge
 - Save 'subscribers_joined.csv' to local drive
 
+
+# 🖥️ Running from the CLI
+
+## 1. Data Ingestion (`data_ingestion.py`)
+
+### Basic Usage
+```bash
+python scripts/data_ingestion.py
+```
+
+### Advanced Options
+```bash
+# Get help and see all available options
+python scripts/data_ingestion.py --help
+
+# Custom output path
+python scripts/data_ingestion.py --output-path results/my_data.csv
+
+# Use different database
+python scripts/data_ingestion.py --db-path data/production_db.sqlite
+
+# Enable verbose output (shows detailed statistics)
+python scripts/data_ingestion.py --verbose
+
+# Combine multiple options
+python scripts/data_ingestion.py --verbose --output-path results/detailed_data.csv --db-path data/test_db.sqlite
+```
+
+### Parameters
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `--output-path` | Path | `data/subscribers_joined.csv` | Path to save the processed CSV file |
+| `--verbose` | Flag | `False` | Enable detailed output and statistics |
+| `--db-path` | Path | `data/crm_database.sqlite` | Path to SQLite database |
+
+### Output
+- Creates `subscribers_joined.csv` with merged subscriber, tag, and purchase data
+- Shows purchase rate statistics
+- With `--verbose`: displays detailed data shapes, columns, and previews
