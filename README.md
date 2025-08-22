@@ -1,5 +1,6 @@
 # File Structure
 
+```
 data/
 ├── crm_database.sqlite
 ├── data.py
@@ -23,6 +24,7 @@ eda.py
 mkdocs.yml
 README.md
 SystemDesign.md
+```
 
 # 1. Get the Data 'data_ingestion.py' 
 - Source SQL DB
