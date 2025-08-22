@@ -47,17 +47,14 @@ python scripts/data_ingestion.py
 # Get help and see all available options
 python scripts/data_ingestion.py --help
 
-# Custom output path
-python scripts/data_ingestion.py --output-path results/my_data.csv
-
-# Use different database
-python scripts/data_ingestion.py --db-path data/production_db.sqlite
-
 # Enable verbose output (shows detailed statistics)
 python scripts/data_ingestion.py --verbose
 
+# Custom output path
+python scripts/data_ingestion.py --output-path results/my_data.csv
+
 # Combine multiple options
-python scripts/data_ingestion.py --verbose --output-path results/detailed_data.csv --db-path data/test_db.sqlite
+python scripts/data_ingestion.py --verbose --output-path results/detailed_data.csv
 ```
 
 ### Parameters
@@ -65,7 +62,6 @@ python scripts/data_ingestion.py --verbose --output-path results/detailed_data.c
 |-----------|------|---------|-------------|
 | `--output-path` | Path | `data/subscribers_joined.csv` | Path to save the processed CSV file |
 | `--verbose` | Flag | `False` | Enable detailed output and statistics |
-| `--db-path` | Path | `data/crm_database.sqlite` | Path to SQLite database |
 
 ### Output
 - Creates `subscribers_joined.csv` with merged subscriber, tag, and purchase data
