@@ -28,9 +28,9 @@ def main(
 
         if verbose:
             typer.echo('--' * 6 + " 📊 Subscribers " + 6 * "--")
-            typer.echo(typer.style(f"📊 Raw subscribers shape: {subscribers_df.shape}", fg=typer.colors.BLUE))
-            typer.echo(typer.style(f"📊 Subscribers columns: {list(subscribers_df.columns)}", fg=typer.colors.BLUE))
-            typer.echo(typer.style(f"📊 Raw subscribers preview:\n{subscribers_df.head().to_string()}", fg=typer.colors.BLUE))
+            typer.echo(typer.style(f"📊 Raw subscribers shape: {subscribers_df.shape}", fg=typer.colors.BRIGHT_YELLOW))
+            typer.echo(typer.style(f"📊 Subscribers columns: {list(subscribers_df.columns)}", fg=typer.colors.BRIGHT_YELLOW))
+            typer.echo(typer.style(f"📊 Raw subscribers preview:\n{subscribers_df.head().to_string()}", fg=typer.colors.BRIGHT_YELLOW))
         # - clean
         subscribers_df['mailchimp_id'] = subscribers_df['mailchimp_id'].astype('int')
         subscribers_df['member_rating'] = subscribers_df['member_rating'].astype('int')
@@ -41,9 +41,9 @@ def main(
 
         if verbose:
             typer.echo('--' * 8 + " 📊 Tags " + 8 * "--")
-            typer.echo(typer.style(f"📊 Raw tags shape: {tags_df.shape}", fg=typer.colors.BLUE))
-            typer.echo(typer.style(f"📊 Tags columns: {list(tags_df.columns)}", fg=typer.colors.BLUE))
-            typer.echo(typer.style(f"📊 Raw tags preview:\n{tags_df.head().to_string()}", fg=typer.colors.BLUE))
+            typer.echo(typer.style(f"📊 Raw tags shape: {tags_df.shape}", fg=typer.colors.BRIGHT_YELLOW))
+            typer.echo(typer.style(f"📊 Tags columns: {list(tags_df.columns)}", fg=typer.colors.BRIGHT_YELLOW))
+            typer.echo(typer.style(f"📊 Raw tags preview:\n{tags_df.head().to_string()}", fg=typer.colors.BRIGHT_YELLOW))
         # - clean
         tags_df['mailchimp_id'] = tags_df['mailchimp_id'].astype("int")
         
@@ -52,9 +52,9 @@ def main(
         
         if verbose:
             typer.echo('--' * 6 + " 📊 Transactions " + 6 * "--")
-            typer.echo(typer.style(f"📊 Raw transactions shape: {transactions_df.shape}", fg=typer.colors.BLUE))
-            typer.echo(typer.style(f"📊 Transactions columns: {list(transactions_df.columns)}", fg=typer.colors.BLUE))
-            typer.echo(typer.style(f"📊 Raw transactions preview:\n{transactions_df.head().to_string()}", fg=typer.colors.BLUE))
+            typer.echo(typer.style(f"📊 Raw transactions shape: {transactions_df.shape}", fg=typer.colors.BRIGHT_YELLOW))
+            typer.echo(typer.style(f"📊 Transactions columns: {list(transactions_df.columns)}", fg=typer.colors.BRIGHT_YELLOW))
+            typer.echo(typer.style(f"📊 Raw transactions preview:\n{transactions_df.head().to_string()}", fg=typer.colors.BRIGHT_YELLOW))
             typer.echo('--' * 20)
         # - clean
         transactions_df['purchased_at'] = transactions_df['purchased_at'].astype('datetime64[ns]')
@@ -90,9 +90,9 @@ def main(
 
     if verbose:
         typer.echo('--' * 6 + " 📊 Subscribers_Joined " + 6 * "--")
-        typer.echo(typer.style(f"📊 Final dataset shape: {subscribers_joined_df.shape}", fg=typer.colors.BLUE))
-        typer.echo(typer.style(f"📊 Final dataset columns: {list(subscribers_joined_df.columns)}", fg=typer.colors.BLUE))
-        typer.echo(typer.style(f"📊 Final dataset preview:\n{subscribers_joined_df.head().to_string()}", fg=typer.colors.BLUE))
+        typer.echo(typer.style(f"📊 Final dataset shape: {subscribers_joined_df.shape}", fg=typer.colors.BRIGHT_YELLOW))
+        typer.echo(typer.style(f"📊 Final dataset columns: {list(subscribers_joined_df.columns)}", fg=typer.colors.BRIGHT_YELLOW))
+        typer.echo(typer.style(f"📊 Final dataset preview:\n{subscribers_joined_df.head().to_string()}", fg=typer.colors.BRIGHT_YELLOW))
         typer.echo('--' * 20)
 
     typer.echo(typer.style(f"✅ Subscribers joined with tags and purchase info: {subscribers_joined_df.shape[0]}", fg=typer.colors.GREEN))
