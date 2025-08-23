@@ -69,6 +69,9 @@ Checks Include:
 - Also some final cleaning 
 - Their is also some functions to prepare the data for xgboost
 
+✅ Output Saved to `data/leads_raw.csv` & `data/leads_cleaned.csv` on local drive
+
+
 # 🖥️ Running from the CLI
 
 ## 1. Data Ingestion (`data_ingestion.py`)
