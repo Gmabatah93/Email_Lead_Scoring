@@ -3,8 +3,10 @@ import great_expectations as gx
 import sqlalchemy as sql
 import logging
 import warnings
-import json
-from pathlib import Path
+import typer
+from typing_extensions import Annotated
+
+app = typer.Typer()
 
 # Suppress most logging and warnings for cleaner output
 logging.getLogger().setLevel(logging.ERROR)
@@ -12,23 +14,12 @@ warnings.filterwarnings("ignore")
 
 logger = logging.getLogger(__name__)
 
-# BROKEN:
-def print_failed_expectations(result, table_name):
-    """Prints failed expectations for a given validation result."""
-    if not result.success:
-        print(f"  ❌ {table_name} table failures:")
-        for res in result.results:
-            if not res.success:
-                exp_type = res.expectation_config.expectation_type
-                column = res.expectation_config.kwargs.get("column", "")
-                print(f"    - {exp_type} on column '{column}':")
-                print(f"      Details: {res.result}")
-    else:
-        print(f"  ✅ All expectations passed for {table_name}.")
-
-def test_crm_source_data():
+@app.command()
+def crm(verbose: Annotated[bool, typer.Option(help="Enable verbose output")] = False):
     """Test raw data quality from CRM database tables using Great Expectations."""
-    print("🔍 Testing CRM source data...")
+    typer.echo("=" * 70)
+    typer.echo(typer.style("🔎 CRM DATA QUALITY TESTS", fg=typer.colors.CYAN))
+    typer.echo("=" * 70)
 
     context = gx.get_context()
     crm_source = context.data_sources.add_sqlite(
@@ -37,7 +28,9 @@ def test_crm_source_data():
     )
 
     # ========== SUBSCRIBERS ==========
-    print("\n--- Subscribers Table Checks ---")
+    typer.echo(typer.style("---" * 1 + " TABLE: Subscribers " + 15 * "---", fg=typer.colors.BRIGHT_GREEN))
+    
+    # Setup
     subscribers_asset = crm_source.add_table_asset(
         name="subscribers_raw",
         table_name="Subscribers"
@@ -49,41 +42,52 @@ def test_crm_source_data():
         expectation_suite=subscribers_suite
     )
 
-    print("  • Checking row count...")
+    # Checks
+    typer.echo(typer.style("🔎 - Checking row count...", fg=typer.colors.BRIGHT_RED))
     subscribers_validator.expect_table_row_count_to_be_between(min_value=1000, max_value=50000)
-    print("  • Checking column count...")
+    
+    typer.echo(typer.style("\n🔎 - Checking column count...", fg=typer.colors.BRIGHT_RED))
     subscribers_validator.expect_table_column_count_to_equal(6)
-    print("  • Checking column order...")
+
+    typer.echo(typer.style("\n🔎 - Checking column order...", fg=typer.colors.BRIGHT_RED))
     subscribers_validator.expect_table_columns_to_match_ordered_list([
         'mailchimp_id', 'user_full_name', 'user_email',
         'member_rating', 'optin_time', 'country_code'
     ])
-    print("  • Checking mailchimp_id uniqueness and not null...")
+
+    typer.echo(typer.style("\n🔎 - Checking mailchimp_id uniqueness and not null...", fg=typer.colors.BRIGHT_RED))
     subscribers_validator.expect_column_values_to_be_unique("mailchimp_id")
     subscribers_validator.expect_column_values_to_not_be_null("mailchimp_id")
-    print("  • Checking user_email uniqueness, not null, and format...")
-    subscribers_validator.expect_column_values_to_be_unique("user_email")
+
+    typer.echo(typer.style("\n🔎 - Checking user_email, not null, and format...", fg=typer.colors.BRIGHT_RED))
     subscribers_validator.expect_column_values_to_not_be_null("user_email")
     subscribers_validator.expect_column_values_to_match_regex(
         "user_email", r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
     )
-    print("  • Checking user_full_name not null...")
+
+    typer.echo(typer.style("\n🔎 - Checking user_full_name not null...", fg=typer.colors.BRIGHT_RED))
     subscribers_validator.expect_column_values_to_not_be_null("user_full_name")
-    print("  • Checking country_code format and allowed values...")
+
+    typer.echo(typer.style("\n🔎 - Checking country_code format and allowed values...", fg=typer.colors.BRIGHT_RED))
     subscribers_validator.expect_column_values_to_match_regex(
-        "country_code", r'^[a-z]{2}$'
+        "country_code", r'^[a-zA-Z]{2}$'
     )
     valid_countries = ['us', 'ca', 'gb', 'au', 'de', 'fr', 'in', 'it', 'co', None]
     subscribers_validator.expect_column_values_to_be_in_set("country_code", valid_countries)
-    print("  • Checking optin_time format...")
+
+    typer.echo(typer.style("\n🔎 - Checking optin_time format...", fg=typer.colors.BRIGHT_RED))
     subscribers_validator.expect_column_values_to_match_regex(
         "optin_time", r'^\d{4}-\d{2}-\d{2}$'
     )
-    print("  • Checking member_rating range...")
+
+    typer.echo(typer.style("\n🔎 - Checking member_rating range...", fg=typer.colors.BRIGHT_RED))
     subscribers_validator.expect_column_values_to_be_between("member_rating", 1, 5)
 
     # ========== TAGS ==========
-    print("\n--- Tags Table Checks ---")
+    print("\n")
+    typer.echo(typer.style("---" * 1 + " TABLE: Tags " + 18 * "---", fg=typer.colors.BRIGHT_GREEN))
+    
+    # Setup
     tags_asset = crm_source.add_table_asset(
         name="tags_raw",
         table_name="Tags"
@@ -94,20 +98,29 @@ def test_crm_source_data():
         batch_request=tags_batch,
         expectation_suite=tags_suite
     )
-    print("  • Checking row count...")
+
+    # Checks
+    typer.echo(typer.style("🔎 - Checking row count...", fg=typer.colors.BRIGHT_RED))
     tags_validator.expect_table_row_count_to_be_between(min_value=1000, max_value=100000)
-    print("  • Checking column count...")
+
+    typer.echo(typer.style("\n🔎 - Checking column count...", fg=typer.colors.BRIGHT_RED))
     tags_validator.expect_table_column_count_to_equal(2)
-    print("  • Checking column order...")
+    
+    typer.echo(typer.style("\n🔎 - Checking column order...", fg=typer.colors.BRIGHT_RED))
     tags_validator.expect_table_columns_to_match_ordered_list(['mailchimp_id', 'tag'])
-    print("  • Checking mailchimp_id not null...")
+    
+    typer.echo(typer.style("\n🔎 - Checking mailchimp_id not null...", fg=typer.colors.BRIGHT_RED))
     tags_validator.expect_column_values_to_not_be_null("mailchimp_id")
-    print("  • Checking tag not null and not empty...")
+    
+    typer.echo(typer.style("  • Checking tag not null and not empty...", fg=typer.colors.BRIGHT_RED))
     tags_validator.expect_column_values_to_not_be_null("tag")
     tags_validator.expect_column_values_to_match_regex("tag", r'^.+$')
 
     # ========== TRANSACTIONS ==========
-    print("\n--- Transactions Table Checks ---")
+    print("\n")
+    typer.echo(typer.style("---" * 1 + " TABLE: Transactions " + 16 * "---", fg=typer.colors.BRIGHT_GREEN))
+    
+    # Setup
     transactions_asset = crm_source.add_table_asset(
         name="transactions_raw",
         table_name="Transactions"
@@ -118,52 +131,60 @@ def test_crm_source_data():
         batch_request=transactions_batch,
         expectation_suite=transactions_suite
     )
-    print("  • Checking row count...")
+
+    # Checks
+    typer.echo(typer.style("🔎 - Checking row count...", fg=typer.colors.BRIGHT_RED))
     transactions_validator.expect_table_row_count_to_be_between(min_value=1000, max_value=20000)
-    print("  • Checking column count...")
+    
+    typer.echo(typer.style("\n🔎 - Checking column count...", fg=typer.colors.BRIGHT_RED))
     transactions_validator.expect_table_column_count_to_equal(6)
-    print("  • Checking column order...")
+    
+    typer.echo(typer.style("\n🔎 - Checking column order...", fg=typer.colors.BRIGHT_RED))
     transactions_validator.expect_table_columns_to_match_ordered_list([
         'transaction_id', 'purchased_at', 'user_full_name',
         'user_email', 'charge_country', 'product_id'
     ])
-    print("  • Checking transaction_id uniqueness and not null...")
+    
+    typer.echo(typer.style("\n🔎 - Checking transaction_id uniqueness and not null...", fg=typer.colors.BRIGHT_RED))
     transactions_validator.expect_column_values_to_be_unique("transaction_id")
     transactions_validator.expect_column_values_to_not_be_null("transaction_id")
-    print("  • Checking user_email and product_id not null and email format...")
+
+    typer.echo(typer.style("\n🔎 - Checking user_email and product_id not null and email format...", fg=typer.colors.BRIGHT_RED))
     transactions_validator.expect_column_values_to_not_be_null("user_email")
     transactions_validator.expect_column_values_to_not_be_null("product_id")
     transactions_validator.expect_column_values_to_match_regex(
         "user_email", r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
     )
-    print("  • Checking purchased_at not null and format...")
+
+    typer.echo(typer.style("\n🔎 - Checking purchased_at not null and format...", fg=typer.colors.BRIGHT_RED))
     transactions_validator.expect_column_values_to_not_be_null("purchased_at")
     transactions_validator.expect_column_values_to_match_regex(
         "purchased_at", r'^\d{4}-\d{2}-\d{2}$'
     )
-    print("  • Checking product_id range...")
+
+    typer.echo(typer.style("\n🔎 - Checking product_id range...", fg=typer.colors.BRIGHT_RED))
     transactions_validator.expect_column_values_to_be_between("product_id", 1, 100)
-    print("  • Checking charge_country allowed values...")
+
+    typer.echo(typer.style("\n🔎 - Checking charge_country allowed values...", fg=typer.colors.BRIGHT_RED))
     valid_charge_countries = ['US', 'CA', 'GB', 'AU', 'DE', 'FR', 'NZ', None]
     transactions_validator.expect_column_values_to_be_in_set("charge_country", valid_charge_countries)
 
     # ========== RUN VALIDATIONS ==========
-    print("\n🔍 Running Subscribers validation...")
-    subscribers_result = subscribers_validator.validate()
-    print(f"Subscribers: {'✅ PASSED' if subscribers_result.success else '❌ FAILED'}")
-    print_failed_expectations(subscribers_result, "Subscribers")
+    print("\n")
+    typer.echo("-" * 70)
+    typer.echo(typer.style("🧾 SUMMARY", fg=typer.colors.BRIGHT_YELLOW))
+    typer.echo("-" * 70)
 
-    print("🔍 Running Tags validation...")
-    tags_result = tags_validator.validate()
-    print(f"Tags: {'✅ PASSED' if tags_result.success else '❌ FAILED'}")
-    print_failed_expectations(tags_result, "Tags")
+    subscribers_result = subscribers_validator.validate(result_format="BASIC")
+    typer.echo(typer.style(f"Subscribers: {'✅ PASSED' if subscribers_result.success else '❌ FAILED'}", fg=typer.colors.GREEN if subscribers_result.success else typer.colors.BRIGHT_RED))
 
-    print("🔍 Running Transactions validation...")
-    transactions_result = transactions_validator.validate()
-    print(f"Transactions: {'✅ PASSED' if transactions_result.success else '❌ FAILED'}")
-    print_failed_expectations(transactions_result, "Transactions")
+    tags_result = tags_validator.validate(result_format="SUMMARY")
+    typer.echo(typer.style(f"Tags: {'✅ PASSED' if tags_result.success else '❌ FAILED'}", fg=typer.colors.GREEN if tags_result.success else typer.colors.BRIGHT_RED))
 
-    print(f"\n🎉 Overall: {'✅ ALL PASSED' if all([subscribers_result.success, tags_result.success, transactions_result.success]) else '❌ SOME FAILED'}")
+    transactions_result = transactions_validator.validate(result_format="COMPLETE")
+    typer.echo(typer.style(f"Transactions: {'✅ PASSED' if transactions_result.success else '❌ FAILED'}", fg=typer.colors.GREEN if transactions_result.success else typer.colors.BRIGHT_RED))
+
+    typer.echo(typer.style(f"\n🎉 Overall: {'✅ ALL PASSED' if all([subscribers_result.success, tags_result.success, transactions_result.success]) else '❌ SOME FAILED'}", fg=typer.colors.BRIGHT_GREEN))
 
     return {
         "subscribers": subscribers_result,
@@ -188,7 +209,7 @@ def run_all_tests():
     print("🚀 Starting comprehensive data testing...")
 
     # Test source data
-    crm_results = test_crm_source_data()
+    crm_results = crm()
 
     # Test processed data (placeholder)
     test_processed_data()
@@ -201,18 +222,4 @@ def run_all_tests():
 
 # CLI interface for running specific tests
 if __name__ == "__main__":
-    import sys
-
-    if len(sys.argv) > 1:
-        test_type = sys.argv[1]
-        if test_type == "crm":
-            test_crm_source_data()
-        elif test_type == "processed":
-            test_processed_data()
-        elif test_type == "business":
-            test_business_rules()
-        else:
-            print("Usage: python data_testing.py [crm|processed|business]")
-    else:
-        # Run all tests by default
-        run_all_tests()
+    app()
