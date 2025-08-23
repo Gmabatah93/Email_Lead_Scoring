@@ -68,3 +68,17 @@ python scripts/data_ingestion.py --verbose --output-path results/detailed_data.c
 - Creates `subscribers_joined.csv` with merged subscriber, tag, and purchase data
 - Shows purchase rate statistics
 - With `--verbose`: displays detailed data shapes, columns, and previews
+
+## 2. Data Testing (`data_testing.py')
+
+### Usage
+```bash
+# Run only raw CRM data quality tests
+python scripts/data_testing.py crm
+
+# Run only processed data quality tests
+python scripts/data_testing.py joined
+
+# Run all data tests (raw CRM data, processed joined data, and business rules)
+python scripts/data_testing.py run-all-tests
+```
