@@ -1,16 +1,21 @@
 import pandas as pd
 import sqlalchemy as sql
 import janitor as jn
-import re 
+import re
+import typer
 from typing import Tuple, Dict, Any
+from typing_extensions import Annotated
+from pathlib import Path
 
 from sklearn.preprocessing import LabelEncoder
 from sklearn.model_selection import train_test_split
 
+app = typer.Typer()
+
 # LOAD AND PREPARE TAG DATA ===================================================
 def merge_tags_with_leads(
-    df_raw: pd.DataFrame, 
-    db_path: str = "data/crm_database.sqlite", 
+    df_raw: pd.DataFrame,
+    db_path: str = "data/crm_database.sqlite",
     output_path: str = "data/leads_raw.csv"
 ) -> pd.DataFrame:
     """
@@ -65,14 +70,14 @@ def preprocess_leads(df: pd.DataFrame) -> pd.DataFrame:
     Returns:
         pd.DataFrame: Preprocessed DataFrame ready for machine learning.
     """
-    print("⚙️ Starting preprocessing...")
+    typer.echo("⚙️ Starting preprocessing...")
     df_processed = df.copy()
-    
+
     # 1. DATE FEATURES
     if 'optin_time' in df_processed.columns:
         df_processed['optin_time'] = pd.to_datetime(df_processed['optin_time'])
         date_max = df_processed['optin_time'].max()
-        
+
         # Temporal features
         df_processed['optin_days'] = (df_processed['optin_time'] - date_max).dt.days
         df_processed['optin_month'] = df_processed['optin_time'].dt.month
@@ -80,21 +85,21 @@ def preprocess_leads(df: pd.DataFrame) -> pd.DataFrame:
         df_processed['optin_day_of_year'] = df_processed['optin_time'].dt.dayofyear
         df_processed['optin_quarter'] = df_processed['optin_time'].dt.quarter
         df_processed['optin_is_weekend'] = df_processed['optin_time'].dt.dayofweek.isin([5, 6]).astype(int)
-    print("📝 Date features Added.")
+    typer.echo("📝 Date features Added.")
 
     # 2. EMAIL FEATURES
     if 'user_email' in df_processed.columns:
         df_processed['email_provider'] = df_processed['user_email'].str.split("@").str[1]
-        
+
         # Email domain categories
         free_providers = ['gmail.com', 'yahoo.com', 'hotmail.com', 'outlook.com', 'aol.com']
         df_processed['is_free_email'] = df_processed['email_provider'].isin(free_providers).astype(int)
-    print("📝 Email features Added.")
+    typer.echo("📝 Email features Added.")
 
     # 3. ACTIVITY FEATURES
     if 'tag_count' in df_processed.columns and 'optin_days' in df_processed.columns:
         df_processed['tag_count_by_optin_day'] = df_processed['tag_count'] / (abs(df_processed['optin_days']) + 1)
-    print("📝 Activity features Added.")
+    typer.echo("📝 Activity features Added.")
 
     # 4. COUNTRY STANDARDIZATION
     if 'country_code' in df_processed.columns:
@@ -105,13 +110,13 @@ def preprocess_leads(df: pd.DataFrame) -> pd.DataFrame:
         df_processed['country_code'] = df_processed['country_code'].apply(
             lambda x: x if x in countries_to_keep else 'other'
         )
-    print("📝 Country codes standardized.")
+    typer.echo("📝 Country codes standardized.")
 
     # 5. CLEAN TAG COLUMNS
     tag_columns = [col for col in df_processed.columns if col.startswith('tag_')]
     for col in tag_columns:
         df_processed[col] = df_processed[col].fillna(0)
-    print(f"📝 Tag columns cleaned: {len(tag_columns)} columns.")
+    typer.echo(f"📝 Tag columns cleaned: {len(tag_columns)} columns.")
 
     return df_processed
 
@@ -128,51 +133,51 @@ def preprocess_for_xgboost(df: pd.DataFrame) -> Tuple[pd.DataFrame, pd.Series, D
             - y: Target Series.
             - label_encoders: Dictionary of fitted LabelEncoders for categorical columns.
     """
-    
+
     df_processed = df.copy()
-    
+
     # Remove unnecessary columns for XGBoost
     REMOVE_COLUMNS = ["mailchimp_id","user_full_name","user_email","optin_time","email_provider"]
     columns_to_remove = [col for col in REMOVE_COLUMNS if col in df_processed.columns]
     df_processed = df_processed.drop(columns=columns_to_remove, axis=1)
-    
+
     # Categorical Features
-    print("Encoding categorical features...")
+    typer.echo("Encoding categorical features...")
     categorical_features = ['country_code']
     label_encoders = {}
 
     for col in categorical_features:
-        le = LabelEncoder() 
+        le = LabelEncoder()
         df_processed[col] = le.fit_transform(df_processed[col].astype(str))
         label_encoders[col] = le
-        print(f"{col} encoded: {le.classes_}\n")
+        typer.echo(f"{col} encoded: {le.classes_}\n")
 
     # Check for missing values
-    print("Checking for missing values...")
+    typer.echo("Checking for missing values...")
     missing_values = df_processed.isnull().sum()
     missing_cols = missing_values[missing_values > 0].index.tolist()
 
     if len(missing_cols) > 0:
-        print(f"Missing values found in columns: {missing_cols}\n")
+        typer.echo(f"Missing values found in columns: {missing_cols}\n")
     else:
-        print("No missing values found.\n")
+        typer.echo("No missing values found.\n")
 
     df_processed = df_processed.fillna(-999)
 
     # Separate features and target
-    print("Separating features and target variable...")
+    typer.echo("Separating features and target variable...")
     X = df_processed.drop('made_purchase', axis=1)
     y = df_processed['made_purchase']
 
-    print(f"Features shape: {X.shape}")
-    print(f"Target distribution:\n{y.value_counts()}\n")
-    
+    typer.echo(f"Features shape: {X.shape}")
+    typer.echo(f"Target distribution:\n{y.value_counts()}\n")
+
     return X, y, label_encoders
 
 def prepare_xgboost_data(
-    data_path: str = "data/leads_cleaned.csv", 
-    test_size: float = 0.2, 
-    val_size: float = 0.2, 
+    data_path: str = "data/leads_cleaned.csv",
+    test_size: float = 0.2,
+    val_size: float = 0.2,
     random_state: int = 123
 ) -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.Series, pd.Series, pd.Series, Dict[str, LabelEncoder]]:
     """
@@ -195,53 +200,68 @@ def prepare_xgboost_data(
             - y_test (pd.Series): Test target.
             - label_encoders (Dict[str, LabelEncoder]): Label encoders for categorical columns.
     """
-    print(10 * "=" + " PREPROCESS: XGBoost " + 10 * "=")
-    
+    typer.echo(10 * "=" + " PREPROCESS: XGBoost " + 10 * "=")
+
     # Load data
     df_leads = pd.read_csv(data_path)
-    
+
     # Apply XGBoost preprocessing
     X, y, label_encoders = preprocess_for_xgboost(df_leads)
-    
-    print(f"Ready for XGBoost training with {X.shape[0]} samples and {X.shape[1]} features.\n")
-    
+
+    typer.echo(f"Ready for XGBoost training with {X.shape[0]} samples and {X.shape[1]} features.\n")
+
     # Split data into training + temp (validation + test)
-    print("Splitting the data into training, validation, and test sets...")
+    typer.echo("Splitting the data into training, validation, and test sets...")
     X_train, X_temp, y_train, y_temp = train_test_split(
-        X, y, 
+        X, y,
         test_size=test_size + val_size,  # Combine validation and test sizes
         random_state=random_state,
         stratify=y
     )
-    
+
     # Further split temp into validation and test sets
     X_val, X_test, y_val, y_test = train_test_split(
-        X_temp, y_temp, 
+        X_temp, y_temp,
         test_size=test_size / (test_size + val_size),  # Adjust proportion
         random_state=random_state,
         stratify=y_temp
     )
 
-    print(f"Training set: {X_train.shape}")
-    print(f"Validation set: {X_val.shape}")
-    print(f"Test set: {X_test.shape}")
-    print(f"Training target distribution:\n{y_train.value_counts()}\n")
-    
+    typer.echo(f"Training set: {X_train.shape}")
+    typer.echo(f"Validation set: {X_val.shape}")
+    typer.echo(f"Test set: {X_test.shape}")
+    typer.echo(f"Training target distribution:\n{y_train.value_counts()}\n")
+
     return X_train, X_val, X_test, y_train, y_val, y_test, label_encoders
 
-if __name__ == "__main__":
-    print("=" * 50)
-    print("PREPROCESSING")
-    print("=" * 50)
+@app.command()
+def main(
+    input_path: Annotated[Path, typer.Option(help="Path to the raw subscribers CSV file.")] = "data/subscribers_joined.csv",
+    db_path: Annotated[str, typer.Option(help="Path to the CRM database.")] = "data/crm_database.sqlite",
+    raw_output_path: Annotated[Path, typer.Option(help="Path to save the merged raw data CSV file.")] = "data/leads_raw.csv",
+    cleaned_output_path: Annotated[Path, typer.Option(help="Path to save the final cleaned data CSV file.")] = "data/leads_cleaned.csv"
+):
+    """
+    Complete data preparation pipeline from ingestion to a cleaned CSV.
+    """
+    typer.echo("=" * 50)
+    typer.echo(typer.style("PREPROCESSING", fg=typer.colors.CYAN))
+    typer.echo("=" * 50)
 
     # Load raw data
-    df = pd.read_csv("data/subscribers_joined.csv")
-    print("✅ Raw data loaded from: data/subscribers_joined.csv")
+    df = pd.read_csv(input_path)
+    typer.echo(typer.style(f"✅ Raw data loaded from: {input_path}", fg=typer.colors.GREEN))
+    typer.echo(f"📊 Raw data shape: {df.shape}")
 
     # Merge tags with leads
-    df = merge_tags_with_leads(df, db_path="data/crm_database.sqlite", output_path="data/leads_raw.csv")
-    
+    df = merge_tags_with_leads(df, db_path=db_path, output_path=raw_output_path)
+
     # Preprocess leads
     df_processed = preprocess_leads(df)
-    df_processed.to_csv("data/leads_cleaned.csv", index=False)
-    print("✅ Preprocessing complete. Saved to data/leads_cleaned.csv.")
+    df_processed.to_csv(cleaned_output_path, index=False)
+    typer.echo(typer.style(f"✅ Preprocessing complete. Saved to {cleaned_output_path}", fg=typer.colors.GREEN))
+    typer.echo(f"📊 Final processed data shape: {df_processed.shape}")
+
+
+if __name__ == "__main__":
+    app()
