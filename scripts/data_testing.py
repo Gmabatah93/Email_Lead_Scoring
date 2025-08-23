@@ -16,10 +16,7 @@ warnings.filterwarnings("ignore")
 logger = logging.getLogger(__name__)
 
 @app.command()
-def crm(
-    verbose: Annotated[bool, typer.Option(help="Enable verbose output")] = False,
-    results_path: Annotated[str, typer.Option(help="Path to save validation results as JSON")] = "results/data_quality/crm_validation_results.json"
-):
+def crm(results_path: Annotated[str, typer.Option(help="Path to save validation results as JSON")] = "results/data_quality/crm_validation_results.json"):
     """Test raw data quality from CRM database tables using Great Expectations."""
     typer.echo("=" * 70)
     typer.echo(typer.style("🧪 CRM DATA QUALITY TESTS", fg=typer.colors.CYAN))
@@ -202,7 +199,7 @@ def crm(
     typer.echo(typer.style(f"✅ Results saved to {results_path}", fg=typer.colors.BRIGHT_GREEN))
 
 @app.command()
-def joined():
+def joined(results_path: Annotated[str, typer.Option(help="Path to save validation results as JSON")] = "results/data_quality/joined_validation_results.json"):
     """Test processed subscribers_joined.csv data quality"""
     typer.echo("=" * 70)
     typer.echo(typer.style("🧪 TEST PROCESSED DATA", fg=typer.colors.CYAN))
@@ -300,7 +297,7 @@ def joined():
     with open("results/data_quality/processed_validation_results.json", "w") as f:
         json.dump(subscribers_joined_result.to_json_dict(), f, indent=2)
 
-    typer.echo(typer.style(f"✅ Results saved to results/data_quality/joined_validation_results.json", fg=typer.colors.BRIGHT_GREEN))
+    typer.echo(typer.style(f"✅ Results saved to {results_path}", fg=typer.colors.BRIGHT_GREEN))
 
 
 def test_business_rules():

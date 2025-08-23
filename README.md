@@ -33,6 +33,26 @@ SystemDesign.md
 - Clean (datatypes) & Merge
 - Save 'subscribers_joined.csv' to local drive
 
+# 2. Test the Data 'data_testing.py'
+
+## CRM Source
+Runs a suite of data quality tests on the raw, source data tables from the CRM database (Subscribers, Tags, and Transactions).
+
+Checks Include: 
+- _Row Count_
+- _Column Count_
+- _Column Order_
+- _Primary Keys_
+- _Formating_
+
+## Processed Data
+Validates the integrity of the processed `subscribers_joined.csv` file, checking for schema compliance and data types.
+
+Checks Include:
+- _Row Count_
+- _Column Count_
+- _Column Order_
+- _Formating_
 
 # 🖥️ Running from the CLI
 
@@ -76,9 +96,15 @@ python scripts/data_ingestion.py --verbose --output-path results/detailed_data.c
 # Run only raw CRM data quality tests
 python scripts/data_testing.py crm
 
-# Run only processed data quality tests
+# Run only Processed "JOINED" data quality tests
 python scripts/data_testing.py joined
 
 # Run all data tests (raw CRM data, processed joined data, and business rules)
 python scripts/data_testing.py run-all-tests
 ```
+
+### Parameters
+The both **crm** & **joined** command has the options:
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| --results-path| Path | results/data_quality/{NAME}.json | Path to save the validation results as JSON |
