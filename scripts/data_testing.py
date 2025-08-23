@@ -199,7 +199,7 @@ def crm(results_path: Annotated[str, typer.Option(help="Path to save validation 
     typer.echo(typer.style(f"✅ Results saved to {results_path}", fg=typer.colors.BRIGHT_GREEN))
 
 @app.command()
-def joined(results_path: Annotated[str, typer.Option(help="Path to save validation results as JSON")] = "results/data_quality/joined_validation_results.json"):
+def joined(results_path: Annotated[str, typer.Option(help="Path to save validation results as JSON")] = "results/data_quality/subscribers_joined_validation_results.json"):
     """Test processed subscribers_joined.csv data quality"""
     typer.echo("=" * 70)
     typer.echo(typer.style("🧪 TEST PROCESSED DATA", fg=typer.colors.CYAN))

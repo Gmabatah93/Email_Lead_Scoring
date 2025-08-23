@@ -57,7 +57,7 @@ Checks Include:
 - _Column Order_
 - _Formating_
 
-✅ Ouput Saved to `results/data_quality/processed_validation_results.json` on local drive
+✅ Ouput Saved to `results/data_quality/subscribers_joined_validation_results.json` on local drive
 
 # 🖥️ Running from the CLI
 
