@@ -3,6 +3,7 @@ import great_expectations as gx
 import sqlalchemy as sql
 import logging
 import warnings
+import json
 import typer
 from typing_extensions import Annotated
 
@@ -15,7 +16,10 @@ warnings.filterwarnings("ignore")
 logger = logging.getLogger(__name__)
 
 @app.command()
-def crm(verbose: Annotated[bool, typer.Option(help="Enable verbose output")] = False):
+def crm(
+    verbose: Annotated[bool, typer.Option(help="Enable verbose output")] = False,
+    results_path: Annotated[str, typer.Option(help="Path to save validation results as JSON")] = "results/data_quality/crm_validation_results.json"
+):
     """Test raw data quality from CRM database tables using Great Expectations."""
     typer.echo("=" * 70)
     typer.echo(typer.style("🔎 CRM DATA QUALITY TESTS", fg=typer.colors.CYAN))
@@ -186,11 +190,16 @@ def crm(verbose: Annotated[bool, typer.Option(help="Enable verbose output")] = F
 
     typer.echo(typer.style(f"\n🎉 Overall: {'✅ ALL PASSED' if all([subscribers_result.success, tags_result.success, transactions_result.success]) else '❌ SOME FAILED'}", fg=typer.colors.BRIGHT_GREEN))
 
-    return {
-        "subscribers": subscribers_result,
-        "tags": tags_result,
-        "transactions": transactions_result
+    # Save results to JSON
+    results = {
+        "subscribers": subscribers_result.to_json_dict(),
+        "tags": tags_result.to_json_dict(),
+        "transactions": transactions_result.to_json_dict()
     }
+    with open(results_path, "w") as f:
+        json.dump(results, f, indent=2)
+
+    typer.echo(typer.style(f"✅ Results saved to {results_path}", fg=typer.colors.BRIGHT_GREEN))
 
 def test_processed_data():
     """Test processed subscribers_joined.csv data quality"""
