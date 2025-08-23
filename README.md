@@ -31,7 +31,8 @@ SystemDesign.md
 - Source SQL DB
 - Pull Tables [Subscribers | Tags | Transaction]
 - Clean (datatypes) & Merge
-- Save 'subscribers_joined.csv' to local drive
+
+✅ Output Saved to `data/subscribers_joined.csv` on local drive
 
 # 2. Test the Data 'data_testing.py'
 
@@ -45,6 +46,8 @@ Checks Include:
 - _Primary Keys_
 - _Formating_
 
+✅ Ouput Saved to `results/data_quality/crm_validation_results.json` on local drive
+
 ## Processed Data
 Validates the integrity of the processed `subscribers_joined.csv` file, checking for schema compliance and data types.
 
@@ -53,6 +56,8 @@ Checks Include:
 - _Column Count_
 - _Column Order_
 - _Formating_
+
+✅ Ouput Saved to `results/data_quality/processed_validation_results.json` on local drive
 
 # 🖥️ Running from the CLI
 
