@@ -200,7 +200,7 @@ def prepare_xgboost_data(
             - y_test (pd.Series): Test target.
             - label_encoders (Dict[str, LabelEncoder]): Label encoders for categorical columns.
     """
-    typer.echo(10 * "=" + " PREPROCESS: XGBoost " + 10 * "=")
+    typer.echo(10 * "=" + " 'preprocess.py': XGBoost " + 10 * "=")
 
     # Load data
     df_leads = pd.read_csv(data_path)
