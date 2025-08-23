@@ -79,10 +79,7 @@ Checks Include:
 ### Basic Usage
 ```bash
 python scripts/data_ingestion.py
-```
 
-### Advanced Options
-```bash
 # Get help and see all available options
 python scripts/data_ingestion.py --help
 
