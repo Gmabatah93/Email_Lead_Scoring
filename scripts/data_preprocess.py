@@ -30,10 +30,11 @@ def merge_tags_with_leads(
     Returns:
         pd.DataFrame: Merged DataFrame with tag columns.
     """
+    typer.echo(typer.style("⚙️ Merging tags with leads...", fg=typer.colors.BRIGHT_YELLOW))
     with sql.create_engine(f"sqlite:///{db_path}").connect() as conn:
         tags_df = pd.read_sql("SELECT * FROM Tags", conn)
         tags_df['mailchimp_id'] = tags_df['mailchimp_id'].astype("int")
-        print(f"✅ Tags loaded from database: {db_path}")
+        typer.echo(typer.style(f"✅ Tags loaded from database: {db_path}", fg=typer.colors.GREEN))
 
     tags_wide_leads_df = tags_df \
         .assign(value=1) \
@@ -56,7 +57,7 @@ def merge_tags_with_leads(
     # Merge raw data with tag data
     df_leads_raw = df_raw.merge(tags_wide_leads_df, how='left')
     df_leads_raw.to_csv(output_path, index=False)
-    print(f"📝 Merged leads and tags saved to {output_path}\n")
+    typer.echo(typer.style(f"✅ Merged leads and tags saved to {output_path}\n", fg=typer.colors.GREEN))
     return df_leads_raw
 
 # PREPROCESSING FUNCTIONS =====================================================
@@ -70,7 +71,7 @@ def preprocess_leads(df: pd.DataFrame) -> pd.DataFrame:
     Returns:
         pd.DataFrame: Preprocessed DataFrame ready for machine learning.
     """
-    typer.echo("⚙️ Starting preprocessing...")
+    typer.echo(typer.style("⚙️ Starting preprocessing...", fg=typer.colors.BRIGHT_YELLOW))
     df_processed = df.copy()
 
     # 1. DATE FEATURES
@@ -251,7 +252,7 @@ def main(
     # Load raw data
     df = pd.read_csv(input_path)
     typer.echo(typer.style(f"✅ Raw data loaded from: {input_path}", fg=typer.colors.GREEN))
-    typer.echo(f"📊 Raw data shape: {df.shape}")
+    typer.echo(f"📊 Raw data shape: {df.shape}\n")
 
     # Merge tags with leads
     df = merge_tags_with_leads(df, db_path=db_path, output_path=raw_output_path)
@@ -259,7 +260,7 @@ def main(
     # Preprocess leads
     df_processed = preprocess_leads(df)
     df_processed.to_csv(cleaned_output_path, index=False)
-    typer.echo(typer.style(f"✅ Preprocessing complete. Saved to {cleaned_output_path}", fg=typer.colors.GREEN))
+    typer.echo(typer.style(f"\n✅ Preprocessing complete. Saved to {cleaned_output_path}", fg=typer.colors.GREEN))
     typer.echo(f"📊 Final processed data shape: {df_processed.shape}")
 
 
