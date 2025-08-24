@@ -149,7 +149,7 @@ def save_best_model(
         "search_algorithm": "Random Search"
     }
     
-    metadata_path = f"models/json/metadata_{timestamp}.json"
+    metadata_path = f"models/json/xgboost_ray_best_metadata_{timestamp}.json"
     with open(metadata_path, "w") as f:
         json.dump(metadata, f, indent=2)
 

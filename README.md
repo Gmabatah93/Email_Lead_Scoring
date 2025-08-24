@@ -71,7 +71,7 @@ Checks Include:
 
 ✅ Output Saved to `data/leads_raw.csv` & `data/leads_cleaned.csv` on local drive
 
-# 4. 👾 Model Training with Ray Tune & XGBoost `RAY_model_xgboost.py`
+# 4. 👾 Model Training: `RAY_model_xgboost.py`
 We use Ray Tune to perform hyperparameter optimization for an XGBoost model. It automates the process of finding the best-performing model configuration and logs all results to MLflow for tracking and reproducibility.
 
 ## Key Features
