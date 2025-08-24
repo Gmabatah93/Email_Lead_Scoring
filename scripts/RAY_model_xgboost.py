@@ -28,7 +28,7 @@ from ray.air.integrations.mlflow import MLflowLoggerCallback
 from ray.air import session
 
 # Import preprocessing functions from your preprocess file
-from preprocess import prepare_xgboost_data, preprocess_leads
+from scripts.data_preprocess import prepare_xgboost_data, preprocess_leads
 
 # Initialize Typer app
 app = typer.Typer()

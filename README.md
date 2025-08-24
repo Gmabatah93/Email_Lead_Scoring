@@ -20,7 +20,7 @@ results/
 scripts/
 ├── data_ingestion.py
 ├── data_testing.py
-├── preprocess.py
+├── data_preprocess.py
 ├── RAY_model_xgboost.py
 ├── RAY_model_evaluation.py
 ├── RAY_model_serve.py
@@ -62,7 +62,7 @@ Checks Include:
 
 ✅ Ouput Saved to `results/data_quality/subscribers_joined_validation_results.json` on local drive
 
-# 3. Preprocess Data `preprocess.py`
+# 3. Preprocess Data `data_preprocess.py`
 - Takes the `subscribers_joined.csv` & Tags from the database to create a new feature -> Output: `leads_raw.csv`
 - Additional feature engineering and cleaning is done 
     - [ Date | Email | Activity ]
@@ -132,7 +132,7 @@ The both **crm** & **joined** command has the options:
 |-----------|------|---------|-------------|
 | --results-path| Path | results/data_quality/{NAME}.json | Path to save the validation results as JSON |
 
-## 3. Preprocess (`preprocess.py`)
+## 3. Preprocess (`data_preprocess.py`)
 
 ### Usage
 ```bash
