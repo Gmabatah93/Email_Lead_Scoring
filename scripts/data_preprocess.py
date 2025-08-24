@@ -141,9 +141,9 @@ def preprocess_for_xgboost(df: pd.DataFrame) -> Tuple[pd.DataFrame, pd.Series, D
     REMOVE_COLUMNS = ["mailchimp_id","user_full_name","user_email","optin_time","email_provider"]
     columns_to_remove = [col for col in REMOVE_COLUMNS if col in df_processed.columns]
     df_processed = df_processed.drop(columns=columns_to_remove, axis=1)
+    typer.echo(typer.style(f"❌ Removed columns: {columns_to_remove}", fg=typer.colors.BRIGHT_RED))
 
     # Categorical Features
-    typer.echo("Encoding categorical features...")
     categorical_features = ['country_code']
     label_encoders = {}
 
@@ -151,28 +151,28 @@ def preprocess_for_xgboost(df: pd.DataFrame) -> Tuple[pd.DataFrame, pd.Series, D
         le = LabelEncoder()
         df_processed[col] = le.fit_transform(df_processed[col].astype(str))
         label_encoders[col] = le
-        typer.echo(f"{col} encoded: {le.classes_}\n")
+        typer.echo(f"📝 {col} encoded: {le.classes_}")
 
     # Check for missing values
-    typer.echo("Checking for missing values...")
     missing_values = df_processed.isnull().sum()
     missing_cols = missing_values[missing_values > 0].index.tolist()
 
     if len(missing_cols) > 0:
         typer.echo(f"Missing values found in columns: {missing_cols}\n")
     else:
-        typer.echo("No missing values found.\n")
+        typer.echo("📝 No missing values found.\n")
 
     df_processed = df_processed.fillna(-999)
 
     # Separate features and target
-    typer.echo("Separating features and target variable...")
     X = df_processed.drop('made_purchase', axis=1)
     y = df_processed['made_purchase']
+    typer.echo(typer.style("🎯 Separated features and target variable", fg=typer.colors.BRIGHT_RED))
 
-    typer.echo(f"Features shape: {X.shape}")
-    typer.echo(f"Target distribution:\n{y.value_counts()}\n")
-
+    typer.echo(f"    Features shape: {X.shape}")
+    positive_pct = y.value_counts(normalize=True).get(1, 0) * 100
+    typer.echo(f"    Target distribution (1) %: {positive_pct:.2f}\n")
+    
     return X, y, label_encoders
 
 def prepare_xgboost_data(
@@ -201,25 +201,25 @@ def prepare_xgboost_data(
             - y_test (pd.Series): Test target.
             - label_encoders (Dict[str, LabelEncoder]): Label encoders for categorical columns.
     """
-    typer.echo(10 * "=" + " 'preprocess.py': XGBoost " + 10 * "=")
+    typer.echo(typer.style("⚙️ Preparing data for XGBoost...", fg=typer.colors.BRIGHT_YELLOW))
 
     # Load data
     df_leads = pd.read_csv(data_path)
+    typer.echo(typer.style(f"✅ Data loaded from: {data_path}", fg=typer.colors.GREEN))
+    typer.echo(f"📊 Data shape: {df_leads.shape}\n")
 
     # Apply XGBoost preprocessing
     X, y, label_encoders = preprocess_for_xgboost(df_leads)
 
-    typer.echo(f"Ready for XGBoost training with {X.shape[0]} samples and {X.shape[1]} features.\n")
-
     # Split data into training + temp (validation + test)
-    typer.echo("Splitting the data into training, validation, and test sets...")
+    typer.echo(typer.style("✂️ Splitting the data into training, validation, and test sets...", fg=typer.colors.BRIGHT_RED))
     X_train, X_temp, y_train, y_temp = train_test_split(
         X, y,
         test_size=test_size + val_size,  # Combine validation and test sizes
         random_state=random_state,
         stratify=y
     )
-
+    
     # Further split temp into validation and test sets
     X_val, X_test, y_val, y_test = train_test_split(
         X_temp, y_temp,
@@ -228,10 +228,12 @@ def prepare_xgboost_data(
         stratify=y_temp
     )
 
-    typer.echo(f"Training set: {X_train.shape}")
-    typer.echo(f"Validation set: {X_val.shape}")
-    typer.echo(f"Test set: {X_test.shape}")
-    typer.echo(f"Training target distribution:\n{y_train.value_counts()}\n")
+    typer.echo(f"📝 Training set: {X_train.shape}")
+    typer.echo(f"📝 Validation set: {X_val.shape}")
+    typer.echo(f"📝 Test set: {X_test.shape}")
+
+    positive_pct = y_train.value_counts(normalize=True).get(1, 0) * 100
+    typer.echo(f"🎯 Training target distribution (1) %: {positive_pct:.2f}\n")
 
     return X_train, X_val, X_test, y_train, y_val, y_test, label_encoders
 

@@ -28,7 +28,7 @@ from ray.air.integrations.mlflow import MLflowLoggerCallback
 from ray.air import session
 
 # Import preprocessing functions from your preprocess file
-from scripts.data_preprocess import prepare_xgboost_data, preprocess_leads
+from data_preprocess import prepare_xgboost_data, preprocess_leads
 
 # Initialize Typer app
 app = typer.Typer()
@@ -43,7 +43,6 @@ def trainable_xgboost(config: Dict[str, Any]) -> None:
     Returns:
         None. Reports metrics to Ray Tune and saves model checkpoints.
     """
-    global trial_counter, training_time_histogram, roc_auc_gauge
     start_time = time.time()
     
     # Retrieve data from Ray object store
@@ -77,17 +76,6 @@ def trainable_xgboost(config: Dict[str, Any]) -> None:
     f1 = f1_score(y_val, y_val_pred)
     recall = recall_score(y_val, y_val_pred)
     roc_auc = roc_auc_score(y_val, y_val_pred_proba)
-    
-    # # Save checkpoint AFTER training and metrics calculation
-    # checkpoint_dir = os.path.join("checkpoints", f"trial_{time.time()}")
-    # os.makedirs(checkpoint_dir, exist_ok=True)
-    # model_path = os.path.join(checkpoint_dir, "model.pkl")
-    # joblib.dump(model, model_path)
-
-    # # Record Prometheus metrics
-    # trial_counter.inc()
-    # training_time_histogram.observe(time.time() - start_time)
-    # roc_auc_gauge.set(roc_auc)
 
     # Report to Ray
     tune.report({"f1": f1, "recall": recall, "roc_auc": roc_auc})
@@ -147,7 +135,7 @@ def save_best_model(
     best_model.fit(X_full_train, y_full_train)
     
     # Save model
-    model_path = f"models/ray/xgboost_ray_best_{timestamp}.pkl"
+    model_path = f"models/xgboost_ray_best_{timestamp}.pkl"
     joblib.dump(best_model, model_path)
     
     # Save metadata
@@ -161,7 +149,7 @@ def save_best_model(
         "search_algorithm": "Random Search"
     }
     
-    metadata_path = f"models/ray/metadata_{timestamp}.json"
+    metadata_path = f"models/json/metadata_{timestamp}.json"
     with open(metadata_path, "w") as f:
         json.dump(metadata, f, indent=2)
 
@@ -176,8 +164,8 @@ def main(
     mlflow_uri: Annotated[str, typer.Option(help="MLflow tracking URI.")] = "file:./mlruns",
     experiment_name: Annotated[str, typer.Option(help="Name of the MLflow experiment.")] = "xgboost_ray_experiment",
     metric: Annotated[str, typer.Option(help="Metric to optimize for Ray Tune.")] = "roc_auc",
-    num_trials: Annotated[int, typer.Option(help="Number of Ray Tune trials.")] = 24,
-    num_workers: Annotated[int, typer.Option(help="Number of concurrent workers for Ray Tune.")] = 6
+    num_trials: Annotated[int, typer.Option(help="Number of Ray Tune trials.")] = 12,
+    num_workers: Annotated[int, typer.Option(help="Number of concurrent workers for Ray Tune.")] = 3
 ):
     """
     Run the complete XGBoost model training and hyperparameter optimization pipeline with Ray Tune.
@@ -210,10 +198,9 @@ def main(
         num_cpus=num_workers,
         object_store_memory=2_000_000_000,
         log_to_driver=False,
-        include_dashboard=True,
-        _metrics_export_port=8080  # Enable Prometheus metrics
+        include_dashboard=True
     )
-    typer.echo(typer.style(f"✅ Ray initialized with resources: {ray.cluster_resources()}\n\n", fg=typer.colors.GREEN))
+    typer.echo(typer.style(f"✅ Ray initialized with resources: {ray.cluster_resources()}\n", fg=typer.colors.GREEN))
 
     # PREPROCESS ============================================================
     typer.echo("=" * 50)
@@ -223,23 +210,21 @@ def main(
     # Apply general preprocessing
     df_leads_processed = preprocess_leads(df_leads_raw)
     typer.echo(f"📝 Preprocessed data with {df_leads_processed.shape[0]} records and {df_leads_processed.shape[1]} features.")
-    typer.echo(f"✅ Data saved to: data/leads_cleaned.csv\n")
+    typer.echo(typer.style(f"✅ Data saved to: data/leads_cleaned.csv\n", fg=typer.colors.BRIGHT_GREEN))
 
     # Use the preprocessing function from preprocess.py
-    typer.echo("⚙️ Preparing data for XGBoost...")
     X_train, X_val, X_test, y_train, y_val, y_test, label_encoders = prepare_xgboost_data(
         data_path="data/leads_cleaned.csv",
         test_size=0.2,
         val_size=0.2,
         random_state=123
     )
-    typer.echo(typer.style(f"✅ Data split into train ({X_train.shape[0]} samples), val ({X_val.shape[0]} samples), and test ({X_test.shape[0]} samples) sets.", fg=typer.colors.GREEN))
     
     # Save the test set to CSV files
     X_test.to_csv("data/X_test.csv", index=False)
     y_test.to_csv("data/y_test.csv", index=False)
     
-    typer.echo(typer.style(f"✅ Ready for XGBoost training with {X_train.shape[0]} training samples.\n\n", fg=typer.colors.GREEN))
+    typer.echo(typer.style(f"✅ Ready for XGBoost training with {X_train.shape[0]} training samples.", fg=typer.colors.GREEN))
     typer.echo(typer.style("✅ Test set saved to 'data/X_test.csv' and 'data/y_test.csv'", fg=typer.colors.GREEN))
 
     # Convert validation and test sets to numpy arrays
@@ -253,11 +238,11 @@ def main(
     y_train_ref = ray.put(y_train)
     y_val_ref = ray.put(y_val)
 
-    typer.echo(typer.style("💾 Stored all data references in Ray.", fg=typer.colors.GREEN))
+    typer.echo(typer.style("💾 Stored all data references in Ray.\n", fg=typer.colors.GREEN))
  
     # RAY: Tune ===========================================================
     typer.echo("=" * 50)
-    typer.echo(typer.style(f" RAY TUNE: {metric}", fg=typer.colors.BRIGHT_YELLOW))
+    typer.echo(typer.style(f" RAY TUNE: {metric}", fg=typer.colors.BRIGHT_MAGENTA))
     typer.echo("=" * 50)
 
     # RAY: Search Space
@@ -268,7 +253,8 @@ def main(
         'subsample': tune.uniform(0.7, 1.0),
         'colsample_bytree': tune.uniform(0.7, 1.0)
     }
-    typer.echo(f"🔥 Search Space: {search_space}")
+    # typer.echo(f"🔥 Search Space: {search_space}")
+    typer.echo(f"🔥 Search Space:\n{json.dumps(search_space, indent=2, default=str)}")
 
     # RAY: Tune Configuration
     tune_config = tune.TuneConfig(
@@ -291,15 +277,9 @@ def main(
                     save_artifact=True,
                     tags={"algorithm": "random_search", "model": "xgboost"}
                 )
-            ],
-            checkpoint_config = CheckpointConfig(
-                num_to_keep=1,  # Keep only the best checkpoint
-                checkpoint_score_attribute=metric,  # Metric to monitor
-                checkpoint_score_order="max"  # Higher roc_auc is better
-            )
-
+            ]
     )
-    typer.echo(f"🔥 Run Config: set with MLflow logging and checkpointing at {experiment_name_with_timestamp}.")
+    typer.echo(f"🔥 Run Config: set with MLflow logging at {experiment_name_with_timestamp}.")
 
     # Run Ray Tune: 
     # - Random Search Algorithm
@@ -309,15 +289,15 @@ def main(
         param_space=search_space,
         run_config=run_config
     )
-    typer.echo("🔥🔥 Ray Tuner:  Initialized (Random Search) 🔥🔥\n\n")
+    typer.echo("🔥 Ray Tuner:  Initialized (Random Search) \n")
 
     # XGBoost: RAY FIT ===========================================================
     typer.echo("=" * 50)
-    typer.echo(typer.style(f"👾 XGBoost: RAY Fit {metric} 👾", fg=typer.colors.BRIGHT_YELLOW))
+    typer.echo(typer.style(f"👾 XGBoost: RAY Fit {metric} 👾", fg=typer.colors.BRIGHT_MAGENTA))
     typer.echo("=" * 50)
 
     results = tuner_Random.fit()
-    typer.echo(typer.style("✅ Ray Tune hyperparameter optimization completed!\n\n", fg=typer.colors.BRIGHT_GREEN))
+    typer.echo(typer.style("✅ Ray Tune hyperparameter optimization completed!\n", fg=typer.colors.BRIGHT_GREEN))
 
     # RESULTS ===========================================================
     typer.echo("=" * 50)
@@ -342,7 +322,7 @@ def main(
         numeric_metrics = {k: v for k, v in best_result.metrics.items() if isinstance(v, (int, float))}
         mlflow.log_metrics(numeric_metrics)
 
-    typer.echo(typer.style("✅ Best trial logged to MLflow!", fg=typer.colors.BRIGHT_GREEN))
+    typer.echo(typer.style("✅ Best trial logged to MLflow!\n", fg=typer.colors.BRIGHT_GREEN))
 
     # SAVE BEST MODEL ===========================================================
     best_model, model_path, metadata_path = save_best_model(
@@ -353,6 +333,16 @@ def main(
         y_val,
         timestamp
     )
+
+    # SHUTDOWN ===========================================================
+    typer.echo(typer.style("Dashboard is running. Press Ctrl+C to shut down...", fg=typer.colors.BRIGHT_YELLOW))
+    try:
+        while True:
+            time.sleep(1) # Keeps the process alive without consuming CPU
+    except KeyboardInterrupt:
+        typer.echo("Shutting down Ray...")
+    finally:
+        ray.shutdown()
     
 if __name__ == "__main__":
     app()
