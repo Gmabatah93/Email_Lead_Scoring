@@ -160,7 +160,7 @@ def save_best_model(
 
 @app.command()
 def main(
-    input_path: Annotated[Path, typer.Option(help="Path to the raw leads CSV file.")] = "data/leads_raw.csv",
+    input_path: Annotated[Path, typer.Option(help="Path to the cleaned leads CSV file.")] = "data/leads_cleaned.csv",
     mlflow_uri: Annotated[str, typer.Option(help="MLflow tracking URI.")] = "file:./mlruns",
     experiment_name: Annotated[str, typer.Option(help="Name of the MLflow experiment.")] = "xgboost_ray_experiment",
     metric: Annotated[str, typer.Option(help="Metric to optimize for Ray Tune.")] = "roc_auc",
@@ -178,10 +178,6 @@ def main(
     typer.echo(typer.style("SETUP", fg=typer.colors.CYAN))
     typer.echo("=" * 50)
 
-    # Get raw data
-    df_leads_raw = pd.read_csv(input_path)
-    typer.echo(typer.style(f"✅ Loaded raw data with {df_leads_raw.shape[0]} records and {df_leads_raw.shape[1]} features.", fg=typer.colors.GREEN))
-
     # MLflow setup
     mlflow.set_tracking_uri(mlflow_uri)
     typer.echo(f"🖥️ MLflow tracking URI: {mlflow.get_tracking_uri()}")
@@ -189,11 +185,10 @@ def main(
     # Create Unique Experiment Name
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     experiment_name_with_timestamp = f"{experiment_name}_{timestamp}"
-    typer.echo(f"🖥️ Experiment name: {experiment_name_with_timestamp}")
-    typer.echo(typer.style(f"🎯 Using metric: {metric} for optimization\n", fg=typer.colors.RED))
-
+    typer.echo(f"🖥️ Experiment name: {experiment_name_with_timestamp}\n")
+    
     # Initialize Ray
-    typer.echo("⚙️ Initializing Ray...")
+    typer.echo(typer.style("⚙️ Initializing Ray...", fg=typer.colors.BRIGHT_YELLOW))
     ray.init(
         num_cpus=num_workers,
         object_store_memory=2_000_000_000,
@@ -207,14 +202,9 @@ def main(
     typer.echo(typer.style("PREPROCESS", fg=typer.colors.CYAN))
     typer.echo("=" * 50)
 
-    # Apply general preprocessing
-    df_leads_processed = preprocess_leads(df_leads_raw)
-    typer.echo(f"📝 Preprocessed data with {df_leads_processed.shape[0]} records and {df_leads_processed.shape[1]} features.")
-    typer.echo(typer.style(f"✅ Data saved to: data/leads_cleaned.csv\n", fg=typer.colors.BRIGHT_GREEN))
-
     # Use the preprocessing function from preprocess.py
     X_train, X_val, X_test, y_train, y_val, y_test, label_encoders = prepare_xgboost_data(
-        data_path="data/leads_cleaned.csv",
+        data_path=input_path,
         test_size=0.2,
         val_size=0.2,
         random_state=123
@@ -238,12 +228,15 @@ def main(
     y_train_ref = ray.put(y_train)
     y_val_ref = ray.put(y_val)
 
-    typer.echo(typer.style("💾 Stored all data references in Ray.\n", fg=typer.colors.GREEN))
+    typer.echo(typer.style("💾 Stored all data references in Ray.\n", fg=typer.colors.BRIGHT_YELLOW))
  
     # RAY: Tune ===========================================================
     typer.echo("=" * 50)
     typer.echo(typer.style(f" RAY TUNE: {metric}", fg=typer.colors.BRIGHT_MAGENTA))
     typer.echo("=" * 50)
+
+    # Metric Selection
+    typer.echo(typer.style(f"🎯 Using metric: {metric} for optimization\n", fg=typer.colors.RED))
 
     # RAY: Search Space
     search_space = {
