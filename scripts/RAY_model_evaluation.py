@@ -87,7 +87,13 @@ import os
 import matplotlib.pyplot as plt
 import seaborn as sns
 from datetime import datetime
+
 from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any
+import typer
+from typing_extensions import Annotated
+import logging
+import warnings
 
 from sklearn.metrics import (
     classification_report, confusion_matrix, roc_auc_score, 
@@ -95,6 +101,13 @@ from sklearn.metrics import (
     recall_score, accuracy_score, average_precision_score
 )
 import xgboost as xgb
+
+app = typer.Typer()
+
+# Suppress most logging and warnings for cleaner output
+logging.getLogger().setLevel(logging.ERROR)
+warnings.filterwarnings("ignore")
+
 
 class ModelEvaluator:
     """
@@ -126,21 +139,20 @@ class ModelEvaluator:
         model_name = os.path.basename(self.model_path).replace(".pkl", "")
         self.output_dir = f"results/evaluation/{model_name}_{timestamp}"
         os.makedirs(self.output_dir, exist_ok=True)
-        print(f"📂 Created output directory: {self.output_dir}")
+        typer.echo(typer.style(f"📂 Created output directory: {self.output_dir}", fg=typer.colors.BRIGHT_GREEN))
 
     def load_model_and_metadata(self) -> None:
         """
         Load the trained model and its metadata (if available).
         """
         self.model = joblib.load(self.model_path)
-        print(f"✅ Model loaded from: {self.model_path}")
-        
+        typer.echo(typer.style(f"✅ Model loaded from: {self.model_path}", fg=typer.colors.BRIGHT_GREEN))
+
         # Load metadata if available
         if self.metadata_path and os.path.exists(self.metadata_path):
             with open(self.metadata_path, 'r') as f:
                 self.metadata = json.load(f)
-            print(f"✅ Metadata loaded from: {self.metadata_path}")
-            print(f"Model trained: {self.metadata.get('timestamp', 'Unknown')}")
+            typer.echo(typer.style(f"✅ Metadata loaded from: {self.metadata_path}", fg=typer.colors.BRIGHT_GREEN))
         else:
             print("⚠️ No metadata file found")
     
@@ -148,40 +160,34 @@ class ModelEvaluator:
         """
         Prepare evaluation datasets by loading test features and labels.
         """
-        print("\n" + "="*50)
-        print("PREPARING EVALUATION DATA")
-        print("="*50)
-        
+        typer.echo(typer.style("⚙️ Preparing Evaluation Data...", fg=typer.colors.BRIGHT_YELLOW))
+
         # Load the test set from CSV files
         self.X_test = pd.read_csv("data/X_test.csv")
         self.y_test = pd.read_csv("data/y_test.csv")
-        
-        print(f"Test samples: {len(self.X_test)}")
-        print(f"Features: {self.X_test.shape[1]}")
+
+        typer.echo(f"📝 Test samples: {len(self.X_test)}")
+        typer.echo(f"📝 Features: {self.X_test.shape[1]}\n")
 
     def generate_predictions(self) -> None:
         """
         Generate predictions and predicted probabilities on the test set.
         """
-        print("\n" + "="*50)
-        print("GENERATING PREDICTIONS")
-        print("="*50)
-        
+        typer.echo(typer.style("🔮 Generating Predictions...", fg=typer.colors.BRIGHT_YELLOW))
+
         # Predictions
         self.y_pred = self.model.predict(self.X_test)
         self.y_pred_proba = self.model.predict_proba(self.X_test)[:, 1]
-        
-        print("✅ Predictions generated")
+
+        typer.echo(typer.style("✅ Predictions generated\n", fg=typer.colors.BRIGHT_GREEN))
 
     def evaluate_classification_metrics(self) -> None:
         """
         Calculate and print comprehensive classification metrics.
         Stores results in self.evaluation_results.
         """
-        print("\n" + "="*50)
-        print("CLASSIFICATION METRICS")
-        print("="*50)
-        
+        typer.echo(typer.style(f"📊 Classification Metrics " + "---" * 5, fg=typer.colors.BRIGHT_MAGENTA))
+ 
         # Basic metrics
         accuracy = accuracy_score(self.y_test, self.y_pred)
         precision = precision_score(self.y_test, self.y_pred)
@@ -211,7 +217,8 @@ class ModelEvaluator:
         # Detailed classification report
         print("\nDetailed Classification Report:")
         print(classification_report(self.y_test, self.y_pred))
-        
+        typer.echo(typer.style("-" * 40, fg=typer.colors.BRIGHT_MAGENTA))
+
     def plot_confusion_matrix(self) -> None:
         """
         Plot and save the confusion matrix as a PNG file.
@@ -228,8 +235,8 @@ class ModelEvaluator:
         output_path = os.path.join(self.output_dir, "confusion_matrix.png")
         plt.savefig(output_path, dpi=300, bbox_inches='tight')
         plt.show()
-        print(f"✅ Confusion matrix saved: {output_path}")
-        
+        typer.echo(typer.style(f"✅ Confusion matrix saved: {output_path}", fg=typer.colors.BRIGHT_GREEN))
+
     def plot_roc_curve(self) -> None:
         """
         Plot and save the ROC curve as a PNG file.
@@ -252,7 +259,7 @@ class ModelEvaluator:
         output_path = os.path.join(self.output_dir, "roc_curve.png")
         plt.savefig(output_path, dpi=300, bbox_inches='tight')
         plt.show()
-        print(f"✅ ROC curve saved: {output_path}")
+        typer.echo(typer.style(f"✅ ROC curve saved: {output_path}", fg=typer.colors.BRIGHT_GREEN))
 
     def plot_precision_recall_curve(self) -> None:
         """
@@ -273,16 +280,14 @@ class ModelEvaluator:
         output_path = os.path.join(self.output_dir, "precision_recall_curve.png")
         plt.savefig(output_path, dpi=300, bbox_inches='tight')
         plt.show()
-        print(f"✅ Precision-Recall curve saved: {output_path}")
+        typer.echo(typer.style(f"✅ Precision-Recall curve saved: {output_path}\n", fg=typer.colors.BRIGHT_GREEN))
 
     def analyze_feature_importance(self) -> None:
         """
         Analyze and plot feature importances. Saves plot and stores importances in evaluation_results.
         """
-        print("\n" + "="*50)
-        print("FEATURE IMPORTANCE ANALYSIS")
-        print("="*50)
-        
+        typer.echo(typer.style(f"🔍 Feature Importance Analysis " + "---" * 4, fg=typer.colors.BRIGHT_MAGENTA))
+
         # Get feature importance
         importance = self.model.feature_importances_
         feature_names = self.X_test.columns if hasattr(self.X_test, 'columns') else [f'feature_{i}' for i in range(len(importance))]
@@ -309,18 +314,14 @@ class ModelEvaluator:
         output_path = os.path.join(self.output_dir, "feature_importance.png")
         plt.savefig(output_path, dpi=300, bbox_inches='tight')
         plt.show()
-        print(f"✅ Feature importance saved: {output_path}")
-        
+        typer.echo(typer.style(f"✅ Feature importance saved: {output_path}", fg=typer.colors.BRIGHT_GREEN))
+
         self.evaluation_results['feature_importance'] = importance_df.to_dict('records')
         
     def save_evaluation_report(self) -> None:
         """
         Save a comprehensive evaluation report as a JSON file.
         """
-        print("\n" + "="*50)
-        print("SAVING EVALUATION REPORT")
-        print("="*50)
-        
         # Create evaluation report
         report = {
             'evaluation_timestamp': datetime.now().isoformat(),
@@ -335,15 +336,16 @@ class ModelEvaluator:
         report_path = os.path.join(self.output_dir, "evaluation_report.json")
         with open(report_path, 'w') as f:
             json.dump(report, f, indent=2, default=str)
-            
-        print(f"✅ Evaluation report saved: {report_path}")
+
+        typer.echo(typer.style(f"✅ Evaluation report saved: {report_path}", fg=typer.colors.BRIGHT_GREEN))
 
     def run_full_evaluation(self) -> None:
         """
         Run the complete evaluation pipeline: directory creation, model loading,
         data preparation, prediction, metrics, plots, feature importance, and report saving.
         """
-        print("🚀 Starting Comprehensive Model Evaluation")
+        print("="*60)
+        typer.echo(typer.style("🚀 Starting Comprehensive Model Evaluation", fg=typer.colors.CYAN))
         print("="*60)
         
         self.create_output_directory()  # Create output directory
@@ -356,34 +358,40 @@ class ModelEvaluator:
         self.plot_precision_recall_curve()
         self.analyze_feature_importance()
         self.save_evaluation_report()
+
+        typer.echo(typer.style("✅ EVALUATION COMPLETE!", fg=typer.colors.BRIGHT_GREEN))
+
+# Typer Command
+@app.command()
+def main(
+    model_path: Annotated[Optional[str], typer.Option(help="Path to the model file (.pkl). Defaults to the latest model.")] = None,
+    metadata_path: Annotated[Optional[str], typer.Option(help="Path to the model metadata file (.json).")] = None
+):
+    """
+    Run the comprehensive model evaluation pipeline.
+    """
+    if not model_path:
+        model_files = [f for f in os.listdir('models/') if f.startswith('xgboost_ray_best_') and f.endswith('.pkl')]
+        if not model_files:
+            typer.echo("❌ No model files found in models/ray directory")
+            raise typer.Exit(code=1)
+        latest_model = sorted(model_files)[-1]
+        model_path = f"models/{latest_model}"
         
-        print("\n" + "="*60)
-        print("✅ EVALUATION COMPLETE!")
-        print("="*60)
+        if not metadata_path:
+            timestamp = latest_model.replace('xgboost_ray_best_', '').replace('.pkl', '')
+            metadata_path = f"models/json/xgboost_ray_best_metadata_{timestamp}.json"
+            if not os.path.exists(metadata_path):
+                metadata_path = None
 
-# MAIN EXECUTION
-if __name__ == "__main__":
-    # Find the latest model file
-    model_files = [f for f in os.listdir('models/ray') if f.startswith('xgboost_ray_best_') and f.endswith('.pkl')]
-    
-    if not model_files:
-        print("❌ No model files found in models/ray directory")
-        exit(1)
-    
-    # Get the latest model
-    latest_model = sorted(model_files)[-1]
-    model_path = f"models/ray/{latest_model}"
-    
-    # Find corresponding metadata file
-    timestamp = latest_model.replace('xgboost_ray_best_', '').replace('.pkl', '')
-    metadata_path = f"models/ray/metadata_{timestamp}.json"
-
-    print(f"📁 Using model: {model_path}")
-    if os.path.exists(metadata_path):
-        print(f"📄 Using metadata: {metadata_path}")
+    typer.echo(typer.style(f"📁 Using model: {model_path}", fg=typer.colors.BRIGHT_RED))
+    if metadata_path:
+        typer.echo(typer.style(f"📄 Using metadata: {metadata_path}\n", fg=typer.colors.BRIGHT_RED))
     else:
-        print("⚠️ No metadata found for the model.")
-    
-    # Run evaluation
+        typer.echo("⚠️ No metadata found for the model.")
+        
     evaluator = ModelEvaluator(model_path, metadata_path)
     evaluator.run_full_evaluation()
+
+if __name__ == "__main__":
+    app()
