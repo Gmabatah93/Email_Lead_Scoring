@@ -179,3 +179,36 @@ python RAY_model_xgboost.py main --experiment-name my_project_ray --metric recal
 | `--metric` | str | `roc_auc` | Metric to optimize for Ray Tune. |
 | `--num-trials` | int | `24` | Number of Ray Tune trials. |
 | `--num-workers` | int | `6` | Number of concurrent workers for Ray Tune. |
+
+## 5. Model Evaluation (`RAY_model_evaluation.py`)
+
+### Usage
+```bash
+# Get help and see all available options
+python scripts/RAY_model_evaluation.py --help
+
+# Run the complete evaluation pipeline using the latest model
+python scripts/RAY_model_evaluation.py
+
+# Specify a particular model and metadata file
+python scripts/RAY_model_evaluation.py --model-path models/xgboost_ray_best_YYYYMMDD_HHMMSS.pkl --metadata-path models/json/xgboost_ray_best_metadata_YYYYMMDD_HHMMSS.json
+```
+
+### Parameters
+| Parameter      | Type   | Default | Description |
+|----------------|--------|---------|-------------|
+| `--model-path` | str    | *latest model* | Path to the trained model file (`.pkl`). If not provided, uses the most recent model in `models/`. |
+| `--metadata-path` | str | *auto*  | Path to the model metadata JSON file. If not provided, tries to find the matching metadata file. |
+
+### Output
+- Saves a comprehensive evaluation report as JSON in `results/evaluation/`
+- Generates and saves plots: confusion matrix, ROC curve, precision-recall curve, and feature importance
+- Prints classification metrics and a detailed report to the console
+
+### Key Features
+- **Automated Evaluation:** Loads the trained model and test data, generates predictions, and computes all key classification metrics (accuracy, precision, recall, F1, ROC AUC, average precision).
+- **Visualization:** Automatically creates and saves confusion matrix, ROC, and precision-recall curves, plus feature importance plots.
+- **Comprehensive Reporting:** Stores all results, metrics, and plots in a timestamped output directory for easy tracking and reproducibility.
+- **Extensible Design:** Built as a class for easy extension (e.g., calibration, slicing, interpretability).
+
+---
