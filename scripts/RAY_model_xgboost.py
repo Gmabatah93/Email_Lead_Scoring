@@ -156,6 +156,15 @@ def save_best_model(
     typer.echo(typer.style(f"✅ Best model saved: {model_path}", fg=typer.colors.BRIGHT_GREEN))
     typer.echo(typer.style(f"✅ Metadata saved: {metadata_path}", fg=typer.colors.BRIGHT_GREEN))
 
+    typer.echo(typer.style("⚙️ Saving feature list...", fg=typer.colors.BRIGHT_YELLOW))
+    features = X_train.columns.tolist()
+    features_dir = "models/features"
+    os.makedirs(features_dir, exist_ok=True)
+    features_path = os.path.join(features_dir, f"xgboost_features_{timestamp}.json")
+    with open(features_path, 'w') as f:
+        json.dump(features, f)
+    typer.echo(typer.style(f"✅ Feature list saved to '{features_path}'\n", fg=typer.colors.GREEN))
+
     return best_model, model_path, metadata_path
 
 @app.command()

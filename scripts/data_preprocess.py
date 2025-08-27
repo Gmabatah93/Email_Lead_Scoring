@@ -3,7 +3,7 @@ import sqlalchemy as sql
 import janitor as jn
 import re
 import typer
-from typing import Tuple, Dict, Any
+from typing import Tuple, Dict, Optional
 from typing_extensions import Annotated
 from pathlib import Path
 
@@ -61,15 +61,23 @@ def merge_tags_with_leads(
     return df_leads_raw
 
 # PREPROCESSING FUNCTIONS =====================================================
-def preprocess_leads(df: pd.DataFrame) -> pd.DataFrame:
+def preprocess_leads(
+    df: pd.DataFrame,
+    label_encoders: Optional[Dict[str, LabelEncoder]] = None,
+    fit_encoders: bool = True
+) -> Tuple[pd.DataFrame, Dict[str, LabelEncoder]]:
     """
-    Apply feature engineering and cleaning steps to the leads DataFrame.
+    Apply feature engineering, cleaning, and label encoding to the leads DataFrame.
+    This function can either fit new encoders (for training) or use existing
+    ones (for prediction).
 
     Args:
         df (pd.DataFrame): Raw DataFrame with subscriber data.
+        label_encoders (Optional[Dict[str, LabelEncoder]], optional): Pre-fitted encoders. Defaults to None.
+        fit_encoders (bool, optional): If True, fit new encoders. Defaults to True.
 
     Returns:
-        pd.DataFrame: Preprocessed DataFrame ready for machine learning.
+        Tuple[pd.DataFrame, Dict[str, LabelEncoder]]: The processed DataFrame and the encoders.
     """
     typer.echo(typer.style("⚙️ Starting preprocessing...", fg=typer.colors.BRIGHT_YELLOW))
     df_processed = df.copy()
@@ -119,7 +127,34 @@ def preprocess_leads(df: pd.DataFrame) -> pd.DataFrame:
         df_processed[col] = df_processed[col].fillna(0)
     typer.echo(f"📝 Tag columns cleaned: {len(tag_columns)} columns.")
 
-    return df_processed
+    # 6. LABEL ENCODING
+    categorical_cols = df_processed.select_dtypes(include=['object', 'category']).columns.tolist()
+    
+    # We don't want to encode the email address itself
+    if 'user_email' in categorical_cols:
+        categorical_cols.remove('user_email')
+
+    if fit_encoders:
+        typer.echo("Fitting new label encoders...")
+        label_encoders = {}
+        for col in categorical_cols:
+            le = LabelEncoder()
+            df_processed[col] = le.fit_transform(df_processed[col].astype(str))
+            label_encoders[col] = le
+    else:
+        typer.echo("Using pre-fitted label encoders...")
+        if label_encoders is None:
+            raise ValueError("label_encoders must be provided when fit_encoders is False.")
+        for col in categorical_cols:
+            if col in label_encoders:
+                le = label_encoders[col]
+                df_processed[col] = le.transform(df_processed[col].astype(str))
+            else:
+                typer.echo(f"Warning: No encoder found for column '{col}'. It will be skipped.")
+
+    typer.echo("✅ Label encoding complete.")
+    
+    return df_processed, label_encoders
 
 def preprocess_for_xgboost(df: pd.DataFrame) -> Tuple[pd.DataFrame, pd.Series, Dict[str, LabelEncoder]]:
     """
