@@ -7,57 +7,58 @@ import json
 from typing import Tuple, List
 
 # Import the specific preprocessing function from your script
+from scripts.utils import find_latest_file, get_latest_artifacts
 from scripts.data_preprocess import preprocess_leads
 
 # --- Helper Functions to Load Latest Artifacts ---
 
-def find_latest_file(directory: str, prefix: str, extension: str) -> str:
-    """Finds the most recent file in a directory based on a timestamp."""
-    files = [f for f in os.listdir(directory) if f.startswith(prefix) and f.endswith(extension)]
-    if not files:
-        return None
-    latest_file = sorted(files, reverse=True)[0]
-    return os.path.join(directory, latest_file)
+# def find_latest_file(directory: str, prefix: str, extension: str) -> str:
+#     """Finds the most recent file in a directory based on a timestamp."""
+#     files = [f for f in os.listdir(directory) if f.startswith(prefix) and f.endswith(extension)]
+#     if not files:
+#         return None
+#     latest_file = sorted(files, reverse=True)[0]
+#     return os.path.join(directory, latest_file)
 
-def get_latest_artifacts() -> Tuple[any, dict, list]:
-    """
-    Loads the latest model, its corresponding label encoders, and the feature list.
-    """
-    print("🔎 Searching for the latest model and artifacts...")
+# def get_latest_artifacts() -> Tuple[any, dict, list]:
+#     """
+#     Loads the latest model, its corresponding label encoders, and the feature list.
+#     """
+#     print("🔎 Searching for the latest model and artifacts...")
 
-    # Find the latest model file
-    model_dir = "models"
-    model_path = find_latest_file(model_dir, prefix="xgboost_ray_best_", extension=".pkl")
-    if not model_path:
-        raise FileNotFoundError(f"No model files found in '{model_dir}'.")
+#     # Find the latest model file
+#     model_dir = "models"
+#     model_path = find_latest_file(model_dir, prefix="xgboost_ray_best_", extension=".pkl")
+#     if not model_path:
+#         raise FileNotFoundError(f"No model files found in '{model_dir}'.")
 
-    # Extract timestamp from the model filename to find matching artifacts
-    timestamp_match = re.search(r'(\d{8}_\d{6})', model_path)
-    if not timestamp_match:
-        raise ValueError(f"Could not extract timestamp from model file: {model_path}")
-    timestamp = timestamp_match.group(1)
+#     # Extract timestamp from the model filename to find matching artifacts
+#     timestamp_match = re.search(r'(\d{8}_\d{6})', model_path)
+#     if not timestamp_match:
+#         raise ValueError(f"Could not extract timestamp from model file: {model_path}")
+#     timestamp = timestamp_match.group(1)
     
-    # Find corresponding encoder and feature files
-    encoder_path = f"models/labels/xgboost_label_encoders_{timestamp}.pkl"
-    features_path = f"models/features/xgboost_features_{timestamp}.json"
+#     # Find corresponding encoder and feature files
+#     encoder_path = f"models/labels/xgboost_label_encoders_{timestamp}.pkl"
+#     features_path = f"models/features/xgboost_features_{timestamp}.json"
 
-    if not os.path.exists(encoder_path):
-        raise FileNotFoundError(f"Missing encoder file for timestamp {timestamp}: {encoder_path}")
-    if not os.path.exists(features_path):
-        raise FileNotFoundError(f"Missing feature list for timestamp {timestamp}: {features_path}")
+#     if not os.path.exists(encoder_path):
+#         raise FileNotFoundError(f"Missing encoder file for timestamp {timestamp}: {encoder_path}")
+#     if not os.path.exists(features_path):
+#         raise FileNotFoundError(f"Missing feature list for timestamp {timestamp}: {features_path}")
 
-    # Load all artifacts
-    print(f"✅ Loading model: {model_path}")
-    model = joblib.load(model_path)
+#     # Load all artifacts
+#     print(f"✅ Loading model: {model_path}")
+#     model = joblib.load(model_path)
     
-    print(f"✅ Loading encoders: {encoder_path}")
-    encoders = joblib.load(encoder_path)
+#     print(f"✅ Loading encoders: {encoder_path}")
+#     encoders = joblib.load(encoder_path)
 
-    print(f"✅ Loading feature list: {features_path}")
-    with open(features_path, 'r') as f:
-        feature_list = json.load(f)
+#     print(f"✅ Loading feature list: {features_path}")
+#     with open(features_path, 'r') as f:
+#         feature_list = json.load(f)
     
-    return model, encoders, feature_list
+#     return model, encoders, feature_list
 
 
 # --- Flask Application ---
