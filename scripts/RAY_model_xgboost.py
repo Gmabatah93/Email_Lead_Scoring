@@ -210,12 +210,18 @@ def main(
         random_state=123
     )
     
+    typer.echo(typer.style(f"✅ Ready for XGBoost training with {X_train.shape[0]} training samples.", fg=typer.colors.GREEN))
+    
     # Save the test set to CSV files
     X_test.to_csv("data/X_test.csv", index=False)
     y_test.to_csv("data/y_test.csv", index=False)
     
-    typer.echo(typer.style(f"✅ Ready for XGBoost training with {X_train.shape[0]} training samples.", fg=typer.colors.GREEN))
     typer.echo(typer.style("✅ Test set saved to 'data/X_test.csv' and 'data/y_test.csv'", fg=typer.colors.GREEN))
+
+    # Save label encoders
+    label_encoder_path = f"models/labels/xgboost_label_encoders_{timestamp}.pkl"
+    joblib.dump(label_encoders, label_encoder_path)
+    typer.echo(typer.style(f"✅ Label encoders saved to '{label_encoder_path}'\n", fg=typer.colors.GREEN))
 
     # Convert validation and test sets to numpy arrays
     y_train = y_train.to_numpy()
