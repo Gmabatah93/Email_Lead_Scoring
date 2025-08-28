@@ -4,6 +4,10 @@ import typer
 from typing_extensions import Annotated
 from pathlib import Path
 
+from rich.console import Console
+from rich.table import Table
+console = Console()
+
 app = typer.Typer()
 
 @app.command()
@@ -97,9 +101,11 @@ def main(
 
     typer.echo(typer.style(f"✅ Subscribers joined with tags and purchase info: {subscribers_joined_df.shape[0]}", fg=typer.colors.GREEN))
 
+    # print(subscribers_joined_df.head())
+    console.print(subscribers_joined_df.head().to_string())
     subscribers_joined_df.to_csv(output_path, index=False)
     typer.echo(typer.style(f"✅ Subscribers joined data saved to: {output_path}", fg=typer.colors.GREEN))
-
+    
 # python scripts/data_ingestion.py --help 
 if __name__ == "__main__":
     app()
