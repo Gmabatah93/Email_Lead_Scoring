@@ -3,7 +3,7 @@ import os
 import re
 import json
 from typing import Tuple, List, Dict, Any
-
+import typer
 
 def find_latest_file(directory: str, prefix: str, extension: str) -> str:
     """Finds the most recent file in a directory based on a timestamp."""
@@ -13,7 +13,7 @@ def find_latest_file(directory: str, prefix: str, extension: str) -> str:
 
 def get_latest_artifacts() -> Tuple[Any, Dict, List]:
     """Loads the latest model, encoders, and feature list."""
-    print("🔎 Searching for the latest model and artifacts...")
+    typer.echo(typer.style("🔎 Searching for the latest model and artifacts...", fg=typer.colors.BRIGHT_YELLOW))
     model_dir = "models"
     model_path = find_latest_file(model_dir, "xgboost_ray_best_", ".pkl")
     if not model_path: raise FileNotFoundError(f"No model files in '{model_dir}'.")
@@ -28,11 +28,11 @@ def get_latest_artifacts() -> Tuple[Any, Dict, List]:
     if not os.path.exists(encoder_path): raise FileNotFoundError(f"Missing encoder: {encoder_path}")
     if not os.path.exists(features_path): raise FileNotFoundError(f"Missing features: {features_path}")
 
-    print(f"✅ Loading model: {model_path}")
+    typer.echo(typer.style(f"⚙️ Loading model: {model_path}...", fg=typer.colors.BRIGHT_YELLOW))
     model = joblib.load(model_path)
-    print(f"✅ Loading encoders: {encoder_path}")
+    typer.echo(typer.style(f"⚙️ Loading encoders: {encoder_path}...", fg=typer.colors.BRIGHT_YELLOW))
     encoders = joblib.load(encoder_path)
-    print(f"✅ Loading feature list: {features_path}")
+    typer.echo(typer.style(f"⚙️ Loading feature list: {features_path}...", fg=typer.colors.BRIGHT_YELLOW))
     with open(features_path, 'r') as f:
         feature_list = json.load(f)
     

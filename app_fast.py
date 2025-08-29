@@ -1,9 +1,16 @@
+"""
+Concurrency:
+- multiple tasks are managed at the same time, but not necessarily executing simultaneously
+- useful for I/O-bound tasks where the program is waiting for external resources.
+
+Parallelism:
+- multiple tasks execute at the exact same time, 
+- beneficial for CPU-bound tasks that require a lot of computation.
+"""
+
 import pandas as pd
-import joblib
-import os
-import re
-import json
-from typing import Tuple, List, Dict, Any
+from typing import List
+import typer
 
 # --- FastAPI and Pydantic Imports ---
 from fastapi import FastAPI
@@ -14,9 +21,6 @@ from scripts.utils import find_latest_file, get_latest_artifacts
 from scripts.data_preprocess import preprocess_leads
 
 # --- Pydantic Model for Input Validation ---
-# This class defines the exact structure and data types FastAPI should expect.
-# It automatically validates incoming data and generates documentation.
-# I've used the fields from our last successful `curl` command.
 class Lead(BaseModel):
     user_email: str
     optin_time: str # FastAPI will handle string-to-datetime conversion if needed, but string is safer here
@@ -70,47 +74,13 @@ class Lead(BaseModel):
     tag_webinar_no_degree: int
     tag_webinar_no_degree_02: int
 
-# # --- Helper Functions (Unchanged from Flask version) ---
-# def find_latest_file(directory: str, prefix: str, extension: str) -> str:
-#     """Finds the most recent file in a directory based on a timestamp."""
-#     files = [f for f in os.listdir(directory) if f.startswith(prefix) and f.endswith(extension)]
-#     if not files: return None
-#     return os.path.join(directory, sorted(files, reverse=True)[0])
-
-# def get_latest_artifacts() -> Tuple[Any, Dict, List]:
-#     """Loads the latest model, encoders, and feature list."""
-#     print("🔎 Searching for the latest model and artifacts...")
-#     model_dir = "models"
-#     model_path = find_latest_file(model_dir, "xgboost_ray_best_", ".pkl")
-#     if not model_path: raise FileNotFoundError(f"No model files in '{model_dir}'.")
-
-#     timestamp_match = re.search(r'(\d{8}_\d{6})', model_path)
-#     if not timestamp_match: raise ValueError(f"No timestamp in model file: {model_path}")
-#     timestamp = timestamp_match.group(1)
-    
-#     encoder_path = f"models/labels/xgboost_label_encoders_{timestamp}.pkl"
-#     features_path = f"models/features/xgboost_features_{timestamp}.json"
-
-#     if not os.path.exists(encoder_path): raise FileNotFoundError(f"Missing encoder: {encoder_path}")
-#     if not os.path.exists(features_path): raise FileNotFoundError(f"Missing features: {features_path}")
-
-#     print(f"✅ Loading model: {model_path}")
-#     model = joblib.load(model_path)
-#     print(f"✅ Loading encoders: {encoder_path}")
-#     encoders = joblib.load(encoder_path)
-#     print(f"✅ Loading feature list: {features_path}")
-#     with open(features_path, 'r') as f:
-#         feature_list = json.load(f)
-    
-#     return model, encoders, feature_list
-
 # --- FastAPI Application ---
 app = FastAPI(title="Lead Conversion API", version="1.0")
 
 # Load artifacts at startup
 try:
     model, label_encoders, feature_list = get_latest_artifacts()
-    print(f"\n🎉 Model, encoders, and {len(feature_list)} features loaded! API is ready.")
+    typer.echo(typer.style(f"\n✅ Model, encoders, and {len(feature_list)} features loaded! API is ready.", fg=typer.colors.BRIGHT_GREEN))
 except (FileNotFoundError, ValueError) as e:
     print(f"\n❌ CRITICAL ERROR: Could not load artifacts. {e}")
     model, label_encoders, feature_list = None, None, None
